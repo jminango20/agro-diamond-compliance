@@ -13,11 +13,25 @@
     "test": "turbo run test",
     "lint": "turbo run lint",
     "clean": "turbo run clean",
-    "dev": "turbo run dev --parallel",
+
     "contracts:build": "pnpm --filter @diamond-erc3643/contracts build",
-    "contracts:test": "pnpm --filter @diamond-erc3643/contracts test",
+    "contracts:clean": "pnpm --filter @diamond-erc3643/contracts clean",
+    "contracts:fmt": "pnpm --filter @diamond-erc3643/contracts fmt",
+    "contracts:fmt:check": "pnpm --filter @diamond-erc3643/contracts fmt:check",
     "contracts:lint": "pnpm --filter @diamond-erc3643/contracts lint",
-    "contracts:fmt": "pnpm --filter @diamond-erc3643/contracts fmt"
+    "contracts:lint:fix": "pnpm --filter @diamond-erc3643/contracts lint:fix",
+
+    "contracts:test": "pnpm --filter @diamond-erc3643/contracts test",
+    "contracts:test:vvv": "pnpm --filter @diamond-erc3643/contracts test:vvv",
+    "contracts:test:unit": "pnpm --filter @diamond-erc3643/contracts test:unit",
+    "contracts:test:fuzz": "pnpm --filter @diamond-erc3643/contracts test:fuzz",
+    "contracts:test:invariant": "pnpm --filter @diamond-erc3643/contracts test:invariant",
+    "contracts:test:fork": "pnpm --filter @diamond-erc3643/contracts test:fork",
+    "contracts:coverage": "pnpm --filter @diamond-erc3643/contracts coverage",
+    "contracts:slither": "pnpm --filter @diamond-erc3643/contracts slither",
+
+    "contracts:deploy:local": "pnpm --filter @diamond-erc3643/contracts deploy:local",
+    "contracts:deploy:dry": "pnpm --filter @diamond-erc3643/contracts deploy:dry"
   },
   "devDependencies": {
     "turbo": "^2.5.4",

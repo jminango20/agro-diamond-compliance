@@ -15,6 +15,7 @@
     "immutable-vars-naming": ["error", { "immutablesAsConstants": true }],
     "reason-string": "off",
     "gas-custom-errors": "error",
-    "no-complex-fallback": "off"
+    "no-complex-fallback": "off",
+    "use-natspec": "off"
   }
 }

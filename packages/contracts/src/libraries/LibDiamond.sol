@@ -1,10 +1,41 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import {IDiamond} from "../interfaces/IDiamond.sol";
+// solhint-disable no-inline-assembly
+// solhint-disable avoid-low-level-calls
+
+import {IDiamond} from "../interfaces/core/IDiamond.sol";
 
 /*//////////////////////////////////////////////////////////////
-                        ERRORS
+                        STORAGE STRUCTS
+    (must precede errors — solhint ordering rule)
+//////////////////////////////////////////////////////////////*/
+
+struct FacetAddressAndPosition {
+    address facetAddress;
+    uint96 functionSelectorPosition;
+}
+
+struct FacetFunctionSelectors {
+    bytes4[] functionSelectors;
+    uint256 facetAddressPosition;
+}
+
+struct DiamondStorage {
+    /// selector → (facetAddress, position in functionSelectors array)
+    mapping(bytes4 => FacetAddressAndPosition) selectorToFacetAndPosition;
+    /// facetAddress → selectors + position in facetAddresses array
+    mapping(address => FacetFunctionSelectors) facetFunctionSelectors;
+    /// ordered list of all registered facet addresses
+    address[] facetAddresses;
+    /// ERC-165 supported interfaces
+    mapping(bytes4 => bool) supportedInterfaces;
+    /// Diamond owner
+    address contractOwner;
+}
+
+/*//////////////////////////////////////////////////////////////
+                            ERRORS
 //////////////////////////////////////////////////////////////*/
 
 error LibDiamond__OnlyOwner();
@@ -19,41 +50,23 @@ error LibDiamond__CannotReplaceSameSelector();
 error LibDiamond__NoContractCode(address target);
 
 /*//////////////////////////////////////////////////////////////
-                        STORAGE
+                            LIBRARY
 //////////////////////////////////////////////////////////////*/
 
-struct FacetAddressAndPosition {
-    address facetAddress;
-    uint96 functionSelectorPosition;
-}
-
-struct FacetFunctionSelectors {
-    bytes4[] functionSelectors;
-    uint256 facetAddressPosition;
-}
-
-struct DiamondStorage {
-    /// selector => (facetAddress, position in facetFunctionSelectors.functionSelectors)
-    mapping(bytes4 => FacetAddressAndPosition) selectorToFacetAndPosition;
-    /// facetAddress => selectors + position in facetAddresses
-    mapping(address => FacetFunctionSelectors) facetFunctionSelectors;
-    /// list of all facet addresses
-    address[] facetAddresses;
-    /// ERC-165 supported interfaces
-    mapping(bytes4 => bool) supportedInterfaces;
-    /// owner of the diamond
-    address contractOwner;
-}
-
-/*//////////////////////////////////////////////////////////////
-                        LIBRARY
-//////////////////////////////////////////////////////////////*/
-
+/// @title LibDiamond
+/// @notice Core EIP-2535 Diamond storage and cut logic.
+///         Assembly is required for storage slot assignment and
+///         low-level calls are required for delegatecall-based
+///         initializers — both are intentional and audited.
 library LibDiamond {
     bytes32 internal constant DIAMOND_STORAGE_POSITION =
         keccak256("diamond.standard.diamond.storage");
 
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    /*//////////////////////////////////////////////////////////////
+                        STORAGE ACCESSOR
+    //////////////////////////////////////////////////////////////*/
 
     function diamondStorage() internal pure returns (DiamondStorage storage ds) {
         bytes32 position = DIAMOND_STORAGE_POSITION;
@@ -62,6 +75,11 @@ library LibDiamond {
         }
     }
 
+    /*//////////////////////////////////////////////////////////////
+                        OWNERSHIP
+    //////////////////////////////////////////////////////////////*/
+
+    // solhint-disable-next-line ordering
     function setContractOwner(address _newOwner) internal {
         DiamondStorage storage ds = diamondStorage();
         address previousOwner = ds.contractOwner;
@@ -69,8 +87,8 @@ library LibDiamond {
         emit OwnershipTransferred(previousOwner, _newOwner);
     }
 
-    function contractOwner() internal view returns (address) {
-        return diamondStorage().contractOwner;
+    function contractOwner() internal view returns (address owner_) {
+        owner_ = diamondStorage().contractOwner;
     }
 
     function enforceIsContractOwner() internal view {
@@ -86,7 +104,7 @@ library LibDiamond {
         address _init,
         bytes memory _calldata
     ) internal {
-        for (uint256 facetIndex; facetIndex < _diamondCut.length; facetIndex++) {
+        for (uint256 facetIndex; facetIndex < _diamondCut.length; ++facetIndex) {
             IDiamond.FacetCutAction action = _diamondCut[facetIndex].action;
             if (action == IDiamond.FacetCutAction.Add) {
                 addFunctions(
@@ -98,7 +116,7 @@ library LibDiamond {
                     _diamondCut[facetIndex].facetAddress,
                     _diamondCut[facetIndex].functionSelectors
                 );
-            } else if (action == IDiamond.FacetCutAction.Remove) {
+            } else {
                 removeFunctions(
                     _diamondCut[facetIndex].facetAddress,
                     _diamondCut[facetIndex].functionSelectors
@@ -117,18 +135,15 @@ library LibDiamond {
         uint96 selectorPosition =
             uint96(ds.facetFunctionSelectors[_facetAddress].functionSelectors.length);
 
-        if (selectorPosition == 0) {
-            addFacet(ds, _facetAddress);
-        }
+        if (selectorPosition == 0) addFacet(ds, _facetAddress);
 
-        for (uint256 i; i < _functionSelectors.length; i++) {
+        for (uint256 i; i < _functionSelectors.length; ++i) {
             bytes4 selector = _functionSelectors[i];
-            address oldFacetAddress = ds.selectorToFacetAndPosition[selector].facetAddress;
-            if (oldFacetAddress != address(0)) {
+            if (ds.selectorToFacetAndPosition[selector].facetAddress != address(0)) {
                 revert LibDiamond__SelectorAlreadyExists(selector);
             }
             addFunction(ds, selector, selectorPosition, _facetAddress);
-            selectorPosition++;
+            ++selectorPosition;
         }
     }
 
@@ -140,17 +155,15 @@ library LibDiamond {
         uint96 selectorPosition =
             uint96(ds.facetFunctionSelectors[_facetAddress].functionSelectors.length);
 
-        if (selectorPosition == 0) {
-            addFacet(ds, _facetAddress);
-        }
+        if (selectorPosition == 0) addFacet(ds, _facetAddress);
 
-        for (uint256 i; i < _functionSelectors.length; i++) {
+        for (uint256 i; i < _functionSelectors.length; ++i) {
             bytes4 selector = _functionSelectors[i];
             address oldFacetAddress = ds.selectorToFacetAndPosition[selector].facetAddress;
             if (oldFacetAddress == _facetAddress) revert LibDiamond__CannotReplaceSameSelector();
             removeFunction(ds, oldFacetAddress, selector);
             addFunction(ds, selector, selectorPosition, _facetAddress);
-            selectorPosition++;
+            ++selectorPosition;
         }
     }
 
@@ -159,12 +172,16 @@ library LibDiamond {
         if (_facetAddress != address(0)) revert LibDiamond__FacetAddressIsNotZeroOnRemove();
 
         DiamondStorage storage ds = diamondStorage();
-        for (uint256 i; i < _functionSelectors.length; i++) {
+        for (uint256 i; i < _functionSelectors.length; ++i) {
             bytes4 selector = _functionSelectors[i];
             address oldFacetAddress = ds.selectorToFacetAndPosition[selector].facetAddress;
             removeFunction(ds, oldFacetAddress, selector);
         }
     }
+
+    /*//////////////////////////////////////////////////////////////
+                        INTERNAL HELPERS
+    //////////////////////////////////////////////////////////////*/
 
     function addFacet(DiamondStorage storage ds, address _facetAddress) internal {
         enforceHasContractCode(_facetAddress);
