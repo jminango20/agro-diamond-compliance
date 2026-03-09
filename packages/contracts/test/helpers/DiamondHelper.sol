@@ -10,6 +10,7 @@ import {AccessControlFacet} from "../../src/facets/security/AccessControlFacet.s
 import {PauseFacet} from "../../src/facets/security/PauseFacet.sol";
 import {EmergencyFacet} from "../../src/facets/security/EmergencyFacet.sol";
 import {FreezeFacet} from "../../src/facets/rwa/FreezeFacet.sol";
+import {RecoveryFacet} from "../../src/facets/rwa/RecoveryFacet.sol";
 import {AssetManagerFacet} from "../../src/facets/token/AssetManagerFacet.sol";
 import {ClaimTopicsFacet} from "../../src/facets/identity/ClaimTopicsFacet.sol";
 import {TrustedIssuerFacet} from "../../src/facets/identity/TrustedIssuerFacet.sol";
@@ -39,6 +40,7 @@ contract DiamondHelper is Test {
         ERC1155Facet erc1155Facet;
         SupplyFacet supplyFacet;
         MetadataFacet metadataFacet;
+        RecoveryFacet recoveryFacet;
     }
 
     function deployDiamond(address owner) internal returns (DeployedDiamond memory d) {
@@ -57,11 +59,12 @@ contract DiamondHelper is Test {
         d.erc1155Facet = new ERC1155Facet();
         d.supplyFacet = new SupplyFacet();
         d.metadataFacet = new MetadataFacet();
+        d.recoveryFacet = new RecoveryFacet();
         DiamondInit diamondInit = new DiamondInit();
 
         d.diamond = new Diamond(owner, address(d.cutFacet));
 
-        IDiamond.FacetCut[] memory cuts = new IDiamond.FacetCut[](14);
+        IDiamond.FacetCut[] memory cuts = new IDiamond.FacetCut[](15);
 
         cuts[0] = IDiamond.FacetCut({
             facetAddress: address(d.loupeFacet),
@@ -132,6 +135,11 @@ contract DiamondHelper is Test {
             facetAddress: address(d.metadataFacet),
             action: IDiamond.FacetCutAction.Add,
             functionSelectors: _metadataSelectors()
+        });
+        cuts[14] = IDiamond.FacetCut({
+            facetAddress: address(d.recoveryFacet),
+            action: IDiamond.FacetCutAction.Add,
+            functionSelectors: _recoverySelectors()
         });
 
         vm.prank(owner);
@@ -282,5 +290,10 @@ contract DiamondHelper is Test {
         sels[4] = MetadataFacet.issuer.selector;
         sels[5] = MetadataFacet.allowedCountries.selector;
         sels[6] = MetadataFacet.tokenInfo.selector;
+    }
+
+    function _recoverySelectors() internal pure returns (bytes4[] memory sels) {
+        sels = new bytes4[](1);
+        sels[0] = RecoveryFacet.recoverWallet.selector;
     }
 }
