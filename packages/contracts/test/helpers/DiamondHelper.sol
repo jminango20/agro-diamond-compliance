@@ -11,6 +11,13 @@ import {PauseFacet} from "../../src/facets/security/PauseFacet.sol";
 import {EmergencyFacet} from "../../src/facets/security/EmergencyFacet.sol";
 import {FreezeFacet} from "../../src/facets/rwa/FreezeFacet.sol";
 import {AssetManagerFacet} from "../../src/facets/token/AssetManagerFacet.sol";
+import {ClaimTopicsFacet} from "../../src/facets/identity/ClaimTopicsFacet.sol";
+import {TrustedIssuerFacet} from "../../src/facets/identity/TrustedIssuerFacet.sol";
+import {IdentityRegistryFacet} from "../../src/facets/identity/IdentityRegistryFacet.sol";
+import {ComplianceRouterFacet} from "../../src/facets/compliance/ComplianceRouterFacet.sol";
+import {ERC1155Facet} from "../../src/facets/token/ERC1155Facet.sol";
+import {SupplyFacet} from "../../src/facets/token/SupplyFacet.sol";
+import {MetadataFacet} from "../../src/facets/token/MetadataFacet.sol";
 import {IDiamond, IDiamondCut, IDiamondLoupe} from "../../src/interfaces/core/IDiamond.sol";
 import {DiamondInit} from "../../src/initializers/DiamondInit.sol";
 
@@ -25,6 +32,13 @@ contract DiamondHelper is Test {
         EmergencyFacet emergencyFacet;
         FreezeFacet freezeFacet;
         AssetManagerFacet assetManagerFacet;
+        ClaimTopicsFacet claimTopicsFacet;
+        TrustedIssuerFacet trustedIssuerFacet;
+        IdentityRegistryFacet identityRegistryFacet;
+        ComplianceRouterFacet complianceRouterFacet;
+        ERC1155Facet erc1155Facet;
+        SupplyFacet supplyFacet;
+        MetadataFacet metadataFacet;
     }
 
     function deployDiamond(address owner) internal returns (DeployedDiamond memory d) {
@@ -36,11 +50,18 @@ contract DiamondHelper is Test {
         d.emergencyFacet = new EmergencyFacet();
         d.freezeFacet = new FreezeFacet();
         d.assetManagerFacet = new AssetManagerFacet();
+        d.claimTopicsFacet = new ClaimTopicsFacet();
+        d.trustedIssuerFacet = new TrustedIssuerFacet();
+        d.identityRegistryFacet = new IdentityRegistryFacet();
+        d.complianceRouterFacet = new ComplianceRouterFacet();
+        d.erc1155Facet = new ERC1155Facet();
+        d.supplyFacet = new SupplyFacet();
+        d.metadataFacet = new MetadataFacet();
         DiamondInit diamondInit = new DiamondInit();
 
         d.diamond = new Diamond(owner, address(d.cutFacet));
 
-        IDiamond.FacetCut[] memory cuts = new IDiamond.FacetCut[](7);
+        IDiamond.FacetCut[] memory cuts = new IDiamond.FacetCut[](14);
 
         cuts[0] = IDiamond.FacetCut({
             facetAddress: address(d.loupeFacet),
@@ -76,6 +97,41 @@ contract DiamondHelper is Test {
             facetAddress: address(d.assetManagerFacet),
             action: IDiamond.FacetCutAction.Add,
             functionSelectors: _assetManagerSelectors()
+        });
+        cuts[7] = IDiamond.FacetCut({
+            facetAddress: address(d.claimTopicsFacet),
+            action: IDiamond.FacetCutAction.Add,
+            functionSelectors: _claimTopicsSelectors()
+        });
+        cuts[8] = IDiamond.FacetCut({
+            facetAddress: address(d.trustedIssuerFacet),
+            action: IDiamond.FacetCutAction.Add,
+            functionSelectors: _trustedIssuerSelectors()
+        });
+        cuts[9] = IDiamond.FacetCut({
+            facetAddress: address(d.identityRegistryFacet),
+            action: IDiamond.FacetCutAction.Add,
+            functionSelectors: _identityRegistrySelectors()
+        });
+        cuts[10] = IDiamond.FacetCut({
+            facetAddress: address(d.complianceRouterFacet),
+            action: IDiamond.FacetCutAction.Add,
+            functionSelectors: _complianceRouterSelectors()
+        });
+        cuts[11] = IDiamond.FacetCut({
+            facetAddress: address(d.erc1155Facet),
+            action: IDiamond.FacetCutAction.Add,
+            functionSelectors: _erc1155Selectors()
+        });
+        cuts[12] = IDiamond.FacetCut({
+            facetAddress: address(d.supplyFacet),
+            action: IDiamond.FacetCutAction.Add,
+            functionSelectors: _supplySelectors()
+        });
+        cuts[13] = IDiamond.FacetCut({
+            facetAddress: address(d.metadataFacet),
+            action: IDiamond.FacetCutAction.Add,
+            functionSelectors: _metadataSelectors()
         });
 
         vm.prank(owner);
@@ -155,5 +211,76 @@ contract DiamondHelper is Test {
         sels[7] = AssetManagerFacet.getAssetConfig.selector;
         sels[8] = AssetManagerFacet.getRegisteredTokenIds.selector;
         sels[9] = AssetManagerFacet.assetExists.selector;
+    }
+
+    function _claimTopicsSelectors() internal pure returns (bytes4[] memory sels) {
+        sels = new bytes4[](5);
+        sels[0] = ClaimTopicsFacet.createProfile.selector;
+        sels[1] = ClaimTopicsFacet.setProfileClaimTopics.selector;
+        sels[2] = ClaimTopicsFacet.getProfileClaimTopics.selector;
+        sels[3] = ClaimTopicsFacet.getProfileVersion.selector;
+        sels[4] = ClaimTopicsFacet.profileExists.selector;
+    }
+
+    function _trustedIssuerSelectors() internal pure returns (bytes4[] memory sels) {
+        sels = new bytes4[](3);
+        sels[0] = TrustedIssuerFacet.addTrustedIssuer.selector;
+        sels[1] = TrustedIssuerFacet.removeTrustedIssuer.selector;
+        sels[2] = TrustedIssuerFacet.isTrustedIssuer.selector;
+    }
+
+    function _identityRegistrySelectors() internal pure returns (bytes4[] memory sels) {
+        sels = new bytes4[](9);
+        sels[0] = IdentityRegistryFacet.registerIdentity.selector;
+        sels[1] = IdentityRegistryFacet.deleteIdentity.selector;
+        sels[2] = IdentityRegistryFacet.updateIdentity.selector;
+        sels[3] = IdentityRegistryFacet.updateCountry.selector;
+        sels[4] = IdentityRegistryFacet.batchRegisterIdentity.selector;
+        sels[5] = IdentityRegistryFacet.isVerified.selector;
+        sels[6] = IdentityRegistryFacet.getIdentity.selector;
+        sels[7] = IdentityRegistryFacet.getCountry.selector;
+        sels[8] = IdentityRegistryFacet.contains.selector;
+    }
+
+    function _complianceRouterSelectors() internal pure returns (bytes4[] memory sels) {
+        sels = new bytes4[](5);
+        sels[0] = ComplianceRouterFacet.canTransfer.selector;
+        sels[1] = ComplianceRouterFacet.transferred.selector;
+        sels[2] = ComplianceRouterFacet.minted.selector;
+        sels[3] = ComplianceRouterFacet.burned.selector;
+        sels[4] = ComplianceRouterFacet.getComplianceModule.selector;
+    }
+
+    function _erc1155Selectors() internal pure returns (bytes4[] memory sels) {
+        sels = new bytes4[](7);
+        sels[0] = ERC1155Facet.safeTransferFrom.selector;
+        sels[1] = ERC1155Facet.safeBatchTransferFrom.selector;
+        sels[2] = ERC1155Facet.setApprovalForAll.selector;
+        sels[3] = ERC1155Facet.balanceOf.selector;
+        sels[4] = ERC1155Facet.balanceOfBatch.selector;
+        sels[5] = ERC1155Facet.isApprovedForAll.selector;
+        sels[6] = ERC1155Facet.partitionBalanceOf.selector;
+    }
+
+    function _supplySelectors() internal pure returns (bytes4[] memory sels) {
+        sels = new bytes4[](7);
+        sels[0] = SupplyFacet.mint.selector;
+        sels[1] = SupplyFacet.batchMint.selector;
+        sels[2] = SupplyFacet.burn.selector;
+        sels[3] = SupplyFacet.forcedTransfer.selector;
+        sels[4] = SupplyFacet.totalSupply.selector;
+        sels[5] = SupplyFacet.holderCount.selector;
+        sels[6] = SupplyFacet.isHolder.selector;
+    }
+
+    function _metadataSelectors() internal pure returns (bytes4[] memory sels) {
+        sels = new bytes4[](7);
+        sels[0] = MetadataFacet.uri.selector;
+        sels[1] = MetadataFacet.name.selector;
+        sels[2] = MetadataFacet.symbol.selector;
+        sels[3] = MetadataFacet.supplyCap.selector;
+        sels[4] = MetadataFacet.issuer.selector;
+        sels[5] = MetadataFacet.allowedCountries.selector;
+        sels[6] = MetadataFacet.tokenInfo.selector;
     }
 }
