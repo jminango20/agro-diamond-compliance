@@ -40,7 +40,7 @@ contract DiamondTest is DiamondHelper {
 
     function test_FacetAddressesReturnsThreeFacets() public view {
         address[] memory addrs = IDiamondLoupe(address(d.diamond)).facetAddresses();
-        assertEq(addrs.length, 13); // cut + loupe + ownership + accessControl + pause + emergency + freeze + assetManager + claimTopics + trustedIssuer + identityRegistry + complianceRouter + erc1155
+        assertEq(addrs.length, 14); // cut + loupe + ownership + accessControl + pause + emergency + freeze + assetManager + claimTopics + trustedIssuer + identityRegistry + complianceRouter + erc1155
     }
 
     /*//////////////////////////////////////////////////////////////
