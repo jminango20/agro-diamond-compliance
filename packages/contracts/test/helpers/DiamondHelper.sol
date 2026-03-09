@@ -17,6 +17,7 @@ import {IdentityRegistryFacet} from "../../src/facets/identity/IdentityRegistryF
 import {ComplianceRouterFacet} from "../../src/facets/compliance/ComplianceRouterFacet.sol";
 import {ERC1155Facet} from "../../src/facets/token/ERC1155Facet.sol";
 import {SupplyFacet} from "../../src/facets/token/SupplyFacet.sol";
+import {MetadataFacet} from "../../src/facets/token/MetadataFacet.sol";
 import {IDiamond, IDiamondCut, IDiamondLoupe} from "../../src/interfaces/core/IDiamond.sol";
 import {DiamondInit} from "../../src/initializers/DiamondInit.sol";
 
@@ -37,6 +38,7 @@ contract DiamondHelper is Test {
         ComplianceRouterFacet complianceRouterFacet;
         ERC1155Facet erc1155Facet;
         SupplyFacet supplyFacet;
+        MetadataFacet metadataFacet;
     }
 
     function deployDiamond(address owner) internal returns (DeployedDiamond memory d) {
@@ -54,11 +56,12 @@ contract DiamondHelper is Test {
         d.complianceRouterFacet = new ComplianceRouterFacet();
         d.erc1155Facet = new ERC1155Facet();
         d.supplyFacet = new SupplyFacet();
+        d.metadataFacet = new MetadataFacet();
         DiamondInit diamondInit = new DiamondInit();
 
         d.diamond = new Diamond(owner, address(d.cutFacet));
 
-        IDiamond.FacetCut[] memory cuts = new IDiamond.FacetCut[](13);
+        IDiamond.FacetCut[] memory cuts = new IDiamond.FacetCut[](14);
 
         cuts[0] = IDiamond.FacetCut({
             facetAddress: address(d.loupeFacet),
@@ -124,6 +127,11 @@ contract DiamondHelper is Test {
             facetAddress: address(d.supplyFacet),
             action: IDiamond.FacetCutAction.Add,
             functionSelectors: _supplySelectors()
+        });
+        cuts[13] = IDiamond.FacetCut({
+            facetAddress: address(d.metadataFacet),
+            action: IDiamond.FacetCutAction.Add,
+            functionSelectors: _metadataSelectors()
         });
 
         vm.prank(owner);
@@ -263,5 +271,16 @@ contract DiamondHelper is Test {
         sels[4] = SupplyFacet.totalSupply.selector;
         sels[5] = SupplyFacet.holderCount.selector;
         sels[6] = SupplyFacet.isHolder.selector;
+    }
+
+    function _metadataSelectors() internal pure returns (bytes4[] memory sels) {
+        sels = new bytes4[](7);
+        sels[0] = MetadataFacet.uri.selector;
+        sels[1] = MetadataFacet.name.selector;
+        sels[2] = MetadataFacet.symbol.selector;
+        sels[3] = MetadataFacet.supplyCap.selector;
+        sels[4] = MetadataFacet.issuer.selector;
+        sels[5] = MetadataFacet.allowedCountries.selector;
+        sels[6] = MetadataFacet.tokenInfo.selector;
     }
 }
