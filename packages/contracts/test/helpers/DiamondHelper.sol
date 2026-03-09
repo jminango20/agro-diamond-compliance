@@ -15,6 +15,7 @@ import {ClaimTopicsFacet} from "../../src/facets/identity/ClaimTopicsFacet.sol";
 import {TrustedIssuerFacet} from "../../src/facets/identity/TrustedIssuerFacet.sol";
 import {IdentityRegistryFacet} from "../../src/facets/identity/IdentityRegistryFacet.sol";
 import {ComplianceRouterFacet} from "../../src/facets/compliance/ComplianceRouterFacet.sol";
+import {ERC1155Facet} from "../../src/facets/token/ERC1155Facet.sol";
 import {IDiamond, IDiamondCut, IDiamondLoupe} from "../../src/interfaces/core/IDiamond.sol";
 import {DiamondInit} from "../../src/initializers/DiamondInit.sol";
 
@@ -33,6 +34,7 @@ contract DiamondHelper is Test {
         TrustedIssuerFacet trustedIssuerFacet;
         IdentityRegistryFacet identityRegistryFacet;
         ComplianceRouterFacet complianceRouterFacet;
+        ERC1155Facet erc1155Facet;
     }
 
     function deployDiamond(address owner) internal returns (DeployedDiamond memory d) {
@@ -48,11 +50,12 @@ contract DiamondHelper is Test {
         d.trustedIssuerFacet = new TrustedIssuerFacet();
         d.identityRegistryFacet = new IdentityRegistryFacet();
         d.complianceRouterFacet = new ComplianceRouterFacet();
+        d.erc1155Facet = new ERC1155Facet();
         DiamondInit diamondInit = new DiamondInit();
 
         d.diamond = new Diamond(owner, address(d.cutFacet));
 
-        IDiamond.FacetCut[] memory cuts = new IDiamond.FacetCut[](11);
+        IDiamond.FacetCut[] memory cuts = new IDiamond.FacetCut[](12);
 
         cuts[0] = IDiamond.FacetCut({
             facetAddress: address(d.loupeFacet),
@@ -108,6 +111,11 @@ contract DiamondHelper is Test {
             facetAddress: address(d.complianceRouterFacet),
             action: IDiamond.FacetCutAction.Add,
             functionSelectors: _complianceRouterSelectors()
+        });
+        cuts[11] = IDiamond.FacetCut({
+            facetAddress: address(d.erc1155Facet),
+            action: IDiamond.FacetCutAction.Add,
+            functionSelectors: _erc1155Selectors()
         });
 
         vm.prank(owner);
@@ -225,5 +233,16 @@ contract DiamondHelper is Test {
         sels[2] = ComplianceRouterFacet.minted.selector;
         sels[3] = ComplianceRouterFacet.burned.selector;
         sels[4] = ComplianceRouterFacet.getComplianceModule.selector;
+    }
+
+    function _erc1155Selectors() internal pure returns (bytes4[] memory sels) {
+        sels = new bytes4[](7);
+        sels[0] = ERC1155Facet.safeTransferFrom.selector;
+        sels[1] = ERC1155Facet.safeBatchTransferFrom.selector;
+        sels[2] = ERC1155Facet.setApprovalForAll.selector;
+        sels[3] = ERC1155Facet.balanceOf.selector;
+        sels[4] = ERC1155Facet.balanceOfBatch.selector;
+        sels[5] = ERC1155Facet.isApprovedForAll.selector;
+        sels[6] = ERC1155Facet.partitionBalanceOf.selector;
     }
 }
