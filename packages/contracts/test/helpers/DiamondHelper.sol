@@ -16,6 +16,7 @@ import {TrustedIssuerFacet} from "../../src/facets/identity/TrustedIssuerFacet.s
 import {IdentityRegistryFacet} from "../../src/facets/identity/IdentityRegistryFacet.sol";
 import {ComplianceRouterFacet} from "../../src/facets/compliance/ComplianceRouterFacet.sol";
 import {ERC1155Facet} from "../../src/facets/token/ERC1155Facet.sol";
+import {SupplyFacet} from "../../src/facets/token/SupplyFacet.sol";
 import {IDiamond, IDiamondCut, IDiamondLoupe} from "../../src/interfaces/core/IDiamond.sol";
 import {DiamondInit} from "../../src/initializers/DiamondInit.sol";
 
@@ -35,6 +36,7 @@ contract DiamondHelper is Test {
         IdentityRegistryFacet identityRegistryFacet;
         ComplianceRouterFacet complianceRouterFacet;
         ERC1155Facet erc1155Facet;
+        SupplyFacet supplyFacet;
     }
 
     function deployDiamond(address owner) internal returns (DeployedDiamond memory d) {
@@ -51,11 +53,12 @@ contract DiamondHelper is Test {
         d.identityRegistryFacet = new IdentityRegistryFacet();
         d.complianceRouterFacet = new ComplianceRouterFacet();
         d.erc1155Facet = new ERC1155Facet();
+        d.supplyFacet = new SupplyFacet();
         DiamondInit diamondInit = new DiamondInit();
 
         d.diamond = new Diamond(owner, address(d.cutFacet));
 
-        IDiamond.FacetCut[] memory cuts = new IDiamond.FacetCut[](12);
+        IDiamond.FacetCut[] memory cuts = new IDiamond.FacetCut[](13);
 
         cuts[0] = IDiamond.FacetCut({
             facetAddress: address(d.loupeFacet),
@@ -116,6 +119,11 @@ contract DiamondHelper is Test {
             facetAddress: address(d.erc1155Facet),
             action: IDiamond.FacetCutAction.Add,
             functionSelectors: _erc1155Selectors()
+        });
+        cuts[12] = IDiamond.FacetCut({
+            facetAddress: address(d.supplyFacet),
+            action: IDiamond.FacetCutAction.Add,
+            functionSelectors: _supplySelectors()
         });
 
         vm.prank(owner);
@@ -244,5 +252,16 @@ contract DiamondHelper is Test {
         sels[4] = ERC1155Facet.balanceOfBatch.selector;
         sels[5] = ERC1155Facet.isApprovedForAll.selector;
         sels[6] = ERC1155Facet.partitionBalanceOf.selector;
+    }
+
+    function _supplySelectors() internal pure returns (bytes4[] memory sels) {
+        sels = new bytes4[](7);
+        sels[0] = SupplyFacet.mint.selector;
+        sels[1] = SupplyFacet.batchMint.selector;
+        sels[2] = SupplyFacet.burn.selector;
+        sels[3] = SupplyFacet.forcedTransfer.selector;
+        sels[4] = SupplyFacet.totalSupply.selector;
+        sels[5] = SupplyFacet.holderCount.selector;
+        sels[6] = SupplyFacet.isHolder.selector;
     }
 }
