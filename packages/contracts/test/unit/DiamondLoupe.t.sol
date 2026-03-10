@@ -23,14 +23,14 @@ contract DiamondLoupeTest is DiamondHelper {
 
     function test_FacetAddressesLength() public view {
         address[] memory addrs = loupe.facetAddresses();
-        assertEq(addrs.length, 16);
+        assertEq(addrs.length, 18);
     }
 
     function test_FacetAddressesContainsCutFacet() public view {
         address[] memory addrs = loupe.facetAddresses();
         bool found;
         for (uint256 i; i < addrs.length; ++i) {
-            if (addrs[i] == address(d.cutFacet)) found = true;
+            if (addrs[i] == address(d.core.cutFacet)) found = true;
         }
         assertTrue(found);
     }
@@ -39,7 +39,7 @@ contract DiamondLoupeTest is DiamondHelper {
         address[] memory addrs = loupe.facetAddresses();
         bool found;
         for (uint256 i; i < addrs.length; ++i) {
-            if (addrs[i] == address(d.loupeFacet)) found = true;
+            if (addrs[i] == address(d.core.loupeFacet)) found = true;
         }
         assertTrue(found);
     }
@@ -48,7 +48,7 @@ contract DiamondLoupeTest is DiamondHelper {
         address[] memory addrs = loupe.facetAddresses();
         bool found;
         for (uint256 i; i < addrs.length; ++i) {
-            if (addrs[i] == address(d.ownershipFacet)) found = true;
+            if (addrs[i] == address(d.core.ownershipFacet)) found = true;
         }
         assertTrue(found);
     }
@@ -58,18 +58,18 @@ contract DiamondLoupeTest is DiamondHelper {
     //////////////////////////////////////////////////////////////*/
 
     function test_CutFacetHasOneSelector() public view {
-        bytes4[] memory sels = loupe.facetFunctionSelectors(address(d.cutFacet));
+        bytes4[] memory sels = loupe.facetFunctionSelectors(address(d.core.cutFacet));
         assertEq(sels.length, 1);
         assertEq(sels[0], IDiamondCut.diamondCut.selector);
     }
 
     function test_LoupeFacetHasFiveSelectors() public view {
-        bytes4[] memory sels = loupe.facetFunctionSelectors(address(d.loupeFacet));
+        bytes4[] memory sels = loupe.facetFunctionSelectors(address(d.core.loupeFacet));
         assertEq(sels.length, 5);
     }
 
     function test_OwnershipFacetHasFourSelectors() public view {
-        bytes4[] memory sels = loupe.facetFunctionSelectors(address(d.ownershipFacet));
+        bytes4[] memory sels = loupe.facetFunctionSelectors(address(d.core.ownershipFacet));
         assertEq(sels.length, 4);
     }
 
@@ -83,7 +83,7 @@ contract DiamondLoupeTest is DiamondHelper {
     //////////////////////////////////////////////////////////////*/
 
     function test_FacetAddressForDiamondCutSelector() public view {
-        assertEq(loupe.facetAddress(IDiamondCut.diamondCut.selector), address(d.cutFacet));
+        assertEq(loupe.facetAddress(IDiamondCut.diamondCut.selector), address(d.core.cutFacet));
     }
 
     function test_FacetAddressForUnknownSelectorIsZero() public view {
@@ -96,7 +96,7 @@ contract DiamondLoupeTest is DiamondHelper {
 
     function test_FacetsReturnsCorrectLength() public view {
         IDiamondLoupe.Facet[] memory fs = loupe.facets();
-        assertEq(fs.length, 16);
+        assertEq(fs.length, 18);
     }
 
     function test_FacetsSelectorsNonEmpty() public view {

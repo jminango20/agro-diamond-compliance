@@ -11,6 +11,8 @@ import {PauseFacet} from "../../src/facets/security/PauseFacet.sol";
 import {EmergencyFacet} from "../../src/facets/security/EmergencyFacet.sol";
 import {FreezeFacet} from "../../src/facets/rwa/FreezeFacet.sol";
 import {RecoveryFacet} from "../../src/facets/rwa/RecoveryFacet.sol";
+import {SnapshotFacet} from "../../src/facets/rwa/SnapshotFacet.sol";
+import {DividendFacet} from "../../src/facets/rwa/DividendFacet.sol";
 import {AssetManagerFacet} from "../../src/facets/token/AssetManagerFacet.sol";
 import {ClaimTopicsFacet} from "../../src/facets/identity/ClaimTopicsFacet.sol";
 import {TrustedIssuerFacet} from "../../src/facets/identity/TrustedIssuerFacet.sol";
@@ -23,8 +25,7 @@ import {IDiamond, IDiamondCut, IDiamondLoupe} from "../../src/interfaces/core/ID
 import {DiamondInit} from "../../src/initializers/DiamondInit.sol";
 
 contract DiamondHelper is Test {
-    struct DeployedDiamond {
-        Diamond diamond;
+    struct CoreFacets {
         DiamondCutFacet cutFacet;
         DiamondLoupeFacet loupeFacet;
         OwnershipFacet ownershipFacet;
@@ -32,120 +33,114 @@ contract DiamondHelper is Test {
         PauseFacet pauseFacet;
         EmergencyFacet emergencyFacet;
         FreezeFacet freezeFacet;
+        RecoveryFacet recoveryFacet;
+    }
+
+    struct TokenFacets {
         AssetManagerFacet assetManagerFacet;
+        ERC1155Facet erc1155Facet;
+        SupplyFacet supplyFacet;
+        MetadataFacet metadataFacet;
+        SnapshotFacet snapshotFacet;
+        DividendFacet dividendFacet;
+    }
+
+    struct ComplianceFacets {
         ClaimTopicsFacet claimTopicsFacet;
         TrustedIssuerFacet trustedIssuerFacet;
         IdentityRegistryFacet identityRegistryFacet;
         ComplianceRouterFacet complianceRouterFacet;
-        ERC1155Facet erc1155Facet;
-        SupplyFacet supplyFacet;
-        MetadataFacet metadataFacet;
-        RecoveryFacet recoveryFacet;
+    }
+
+    struct DeployedDiamond {
+        Diamond diamond;
+        CoreFacets core;
+        TokenFacets token;
+        ComplianceFacets compliance;
     }
 
     function deployDiamond(address owner) internal returns (DeployedDiamond memory d) {
-        d.cutFacet = new DiamondCutFacet();
-        d.loupeFacet = new DiamondLoupeFacet();
-        d.ownershipFacet = new OwnershipFacet();
-        d.accessControlFacet = new AccessControlFacet();
-        d.pauseFacet = new PauseFacet();
-        d.emergencyFacet = new EmergencyFacet();
-        d.freezeFacet = new FreezeFacet();
-        d.assetManagerFacet = new AssetManagerFacet();
-        d.claimTopicsFacet = new ClaimTopicsFacet();
-        d.trustedIssuerFacet = new TrustedIssuerFacet();
-        d.identityRegistryFacet = new IdentityRegistryFacet();
-        d.complianceRouterFacet = new ComplianceRouterFacet();
-        d.erc1155Facet = new ERC1155Facet();
-        d.supplyFacet = new SupplyFacet();
-        d.metadataFacet = new MetadataFacet();
-        d.recoveryFacet = new RecoveryFacet();
+        d.core = _deployCoreFacets();
+        d.token = _deployTokenFacets();
+        d.compliance = _deployComplianceFacets();
         DiamondInit diamondInit = new DiamondInit();
 
-        d.diamond = new Diamond(owner, address(d.cutFacet));
+        d.diamond = new Diamond(owner, address(d.core.cutFacet));
 
-        IDiamond.FacetCut[] memory cuts = new IDiamond.FacetCut[](15);
-
-        cuts[0] = IDiamond.FacetCut({
-            facetAddress: address(d.loupeFacet),
-            action: IDiamond.FacetCutAction.Add,
-            functionSelectors: _loupeSelectors()
-        });
-        cuts[1] = IDiamond.FacetCut({
-            facetAddress: address(d.ownershipFacet),
-            action: IDiamond.FacetCutAction.Add,
-            functionSelectors: _ownershipSelectors()
-        });
-        cuts[2] = IDiamond.FacetCut({
-            facetAddress: address(d.accessControlFacet),
-            action: IDiamond.FacetCutAction.Add,
-            functionSelectors: _accessControlSelectors()
-        });
-        cuts[3] = IDiamond.FacetCut({
-            facetAddress: address(d.pauseFacet),
-            action: IDiamond.FacetCutAction.Add,
-            functionSelectors: _pauseSelectors()
-        });
-        cuts[4] = IDiamond.FacetCut({
-            facetAddress: address(d.emergencyFacet),
-            action: IDiamond.FacetCutAction.Add,
-            functionSelectors: _emergencySelectors()
-        });
-        cuts[5] = IDiamond.FacetCut({
-            facetAddress: address(d.freezeFacet),
-            action: IDiamond.FacetCutAction.Add,
-            functionSelectors: _freezeSelectors()
-        });
-        cuts[6] = IDiamond.FacetCut({
-            facetAddress: address(d.assetManagerFacet),
-            action: IDiamond.FacetCutAction.Add,
-            functionSelectors: _assetManagerSelectors()
-        });
-        cuts[7] = IDiamond.FacetCut({
-            facetAddress: address(d.claimTopicsFacet),
-            action: IDiamond.FacetCutAction.Add,
-            functionSelectors: _claimTopicsSelectors()
-        });
-        cuts[8] = IDiamond.FacetCut({
-            facetAddress: address(d.trustedIssuerFacet),
-            action: IDiamond.FacetCutAction.Add,
-            functionSelectors: _trustedIssuerSelectors()
-        });
-        cuts[9] = IDiamond.FacetCut({
-            facetAddress: address(d.identityRegistryFacet),
-            action: IDiamond.FacetCutAction.Add,
-            functionSelectors: _identityRegistrySelectors()
-        });
-        cuts[10] = IDiamond.FacetCut({
-            facetAddress: address(d.complianceRouterFacet),
-            action: IDiamond.FacetCutAction.Add,
-            functionSelectors: _complianceRouterSelectors()
-        });
-        cuts[11] = IDiamond.FacetCut({
-            facetAddress: address(d.erc1155Facet),
-            action: IDiamond.FacetCutAction.Add,
-            functionSelectors: _erc1155Selectors()
-        });
-        cuts[12] = IDiamond.FacetCut({
-            facetAddress: address(d.supplyFacet),
-            action: IDiamond.FacetCutAction.Add,
-            functionSelectors: _supplySelectors()
-        });
-        cuts[13] = IDiamond.FacetCut({
-            facetAddress: address(d.metadataFacet),
-            action: IDiamond.FacetCutAction.Add,
-            functionSelectors: _metadataSelectors()
-        });
-        cuts[14] = IDiamond.FacetCut({
-            facetAddress: address(d.recoveryFacet),
-            action: IDiamond.FacetCutAction.Add,
-            functionSelectors: _recoverySelectors()
-        });
+        IDiamond.FacetCut[] memory cuts = new IDiamond.FacetCut[](17);
+        _fillCoreCuts(cuts, d.core);
+        _fillTokenCuts(cuts, d.token);
+        _fillComplianceCuts(cuts, d.compliance);
 
         vm.prank(owner);
         IDiamondCut(address(d.diamond)).diamondCut(
             cuts, address(diamondInit), abi.encodeCall(DiamondInit.init, ())
         );
+    }
+
+    function _deployCoreFacets() internal returns (CoreFacets memory c) {
+        c.cutFacet = new DiamondCutFacet();
+        c.loupeFacet = new DiamondLoupeFacet();
+        c.ownershipFacet = new OwnershipFacet();
+        c.accessControlFacet = new AccessControlFacet();
+        c.pauseFacet = new PauseFacet();
+        c.emergencyFacet = new EmergencyFacet();
+        c.freezeFacet = new FreezeFacet();
+        c.recoveryFacet = new RecoveryFacet();
+    }
+
+    function _deployTokenFacets() internal returns (TokenFacets memory t) {
+        t.assetManagerFacet = new AssetManagerFacet();
+        t.erc1155Facet = new ERC1155Facet();
+        t.supplyFacet = new SupplyFacet();
+        t.metadataFacet = new MetadataFacet();
+        t.snapshotFacet = new SnapshotFacet();
+        t.dividendFacet = new DividendFacet();
+    }
+
+    function _deployComplianceFacets() internal returns (ComplianceFacets memory c) {
+        c.claimTopicsFacet = new ClaimTopicsFacet();
+        c.trustedIssuerFacet = new TrustedIssuerFacet();
+        c.identityRegistryFacet = new IdentityRegistryFacet();
+        c.complianceRouterFacet = new ComplianceRouterFacet();
+    }
+
+    function _fillCoreCuts(IDiamond.FacetCut[] memory cuts, CoreFacets memory c) internal pure {
+        cuts[0] = _cut(address(c.loupeFacet), _loupeSelectors());
+        cuts[1] = _cut(address(c.ownershipFacet), _ownershipSelectors());
+        cuts[2] = _cut(address(c.accessControlFacet), _accessControlSelectors());
+        cuts[3] = _cut(address(c.pauseFacet), _pauseSelectors());
+        cuts[4] = _cut(address(c.emergencyFacet), _emergencySelectors());
+        cuts[5] = _cut(address(c.freezeFacet), _freezeSelectors());
+        cuts[14] = _cut(address(c.recoveryFacet), _recoverySelectors());
+    }
+
+    function _fillTokenCuts(IDiamond.FacetCut[] memory cuts, TokenFacets memory t) internal pure {
+        cuts[6] = _cut(address(t.assetManagerFacet), _assetManagerSelectors());
+        cuts[11] = _cut(address(t.erc1155Facet), _erc1155Selectors());
+        cuts[12] = _cut(address(t.supplyFacet), _supplySelectors());
+        cuts[13] = _cut(address(t.metadataFacet), _metadataSelectors());
+        cuts[15] = _cut(address(t.snapshotFacet), _snapshotSelectors());
+        cuts[16] = _cut(address(t.dividendFacet), _dividendSelectors());
+    }
+
+    function _fillComplianceCuts(IDiamond.FacetCut[] memory cuts, ComplianceFacets memory c) internal pure {
+        cuts[7] = _cut(address(c.claimTopicsFacet), _claimTopicsSelectors());
+        cuts[8] = _cut(address(c.trustedIssuerFacet), _trustedIssuerSelectors());
+        cuts[9] = _cut(address(c.identityRegistryFacet), _identityRegistrySelectors());
+        cuts[10] = _cut(address(c.complianceRouterFacet), _complianceRouterSelectors());
+    }
+
+    function _cut(address facet, bytes4[] memory sels)
+        internal
+        pure
+        returns (IDiamond.FacetCut memory)
+    {
+        return IDiamond.FacetCut({
+            facetAddress: facet,
+            action: IDiamond.FacetCutAction.Add,
+            functionSelectors: sels
+        });
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -295,5 +290,27 @@ contract DiamondHelper is Test {
     function _recoverySelectors() internal pure returns (bytes4[] memory sels) {
         sels = new bytes4[](1);
         sels[0] = RecoveryFacet.recoverWallet.selector;
+    }
+
+    function _snapshotSelectors() internal pure returns (bytes4[] memory sels) {
+        sels = new bytes4[](8);
+        sels[0] = SnapshotFacet.createSnapshot.selector;
+        sels[1] = SnapshotFacet.recordHolder.selector;
+        sels[2] = SnapshotFacet.recordHoldersBatch.selector;
+        sels[3] = SnapshotFacet.getSnapshot.selector;
+        sels[4] = SnapshotFacet.getSnapshotBalance.selector;
+        sels[5] = SnapshotFacet.getTokenSnapshots.selector;
+        sels[6] = SnapshotFacet.getLatestSnapshotId.selector;
+        sels[7] = SnapshotFacet.nextSnapshotId.selector;
+    }
+
+    function _dividendSelectors() internal pure returns (bytes4[] memory sels) {
+        sels = new bytes4[](6);
+        sels[0] = DividendFacet.createDividend.selector;
+        sels[1] = DividendFacet.claimDividend.selector;
+        sels[2] = DividendFacet.getDividend.selector;
+        sels[3] = DividendFacet.hasClaimed.selector;
+        sels[4] = DividendFacet.claimableAmount.selector;
+        sels[5] = DividendFacet.getTokenDividends.selector;
     }
 }

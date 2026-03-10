@@ -13,6 +13,8 @@ import {PauseFacet} from "../src/facets/security/PauseFacet.sol";
 import {EmergencyFacet} from "../src/facets/security/EmergencyFacet.sol";
 import {FreezeFacet} from "../src/facets/rwa/FreezeFacet.sol";
 import {RecoveryFacet} from "../src/facets/rwa/RecoveryFacet.sol";
+import {SnapshotFacet} from "../src/facets/rwa/SnapshotFacet.sol";
+import {DividendFacet} from "../src/facets/rwa/DividendFacet.sol";
 import {AssetManagerFacet} from "../src/facets/token/AssetManagerFacet.sol";
 import {ClaimTopicsFacet} from "../src/facets/identity/ClaimTopicsFacet.sol";
 import {TrustedIssuerFacet} from "../src/facets/identity/TrustedIssuerFacet.sol";
@@ -63,6 +65,8 @@ contract Deploy is Script {
         ERC1155Facet erc1155Facet = new ERC1155Facet();
         SupplyFacet supplyFacet = new SupplyFacet();
         MetadataFacet metadataFacet = new MetadataFacet();
+        SnapshotFacet snapshotFacet = new SnapshotFacet();
+        DividendFacet dividendFacet = new DividendFacet();
         DiamondInit diamondInit = new DiamondInit();
 
         // ── 2. Deploy Diamond ───────────────────────────────────────
@@ -71,7 +75,7 @@ contract Deploy is Script {
 
         // ── 3. Build facet cuts ─────────────────────────────────────
 
-        IDiamond.FacetCut[] memory cuts = new IDiamond.FacetCut[](15);
+        IDiamond.FacetCut[] memory cuts = new IDiamond.FacetCut[](17);
 
         cuts[0] = _cut(address(loupeFacet), _loupeSelectors());
         cuts[1] = _cut(address(ownershipFacet), _ownershipSelectors());
@@ -88,6 +92,8 @@ contract Deploy is Script {
         cuts[12] = _cut(address(erc1155Facet), _erc1155Selectors());
         cuts[13] = _cut(address(supplyFacet), _supplySelectors());
         cuts[14] = _cut(address(metadataFacet), _metadataSelectors());
+        cuts[15] = _cut(address(snapshotFacet), _snapshotSelectors());
+        cuts[16] = _cut(address(dividendFacet), _dividendSelectors());
 
         // ── 4. Execute diamond cut + init ───────────────────────────
 
@@ -118,6 +124,8 @@ contract Deploy is Script {
         console2.log("--- RWA ---");
         console2.log("FreezeFacet          :", address(freezeFacet));
         console2.log("RecoveryFacet        :", address(recoveryFacet));
+        console2.log("SnapshotFacet        :", address(snapshotFacet));
+        console2.log("DividendFacet        :", address(dividendFacet));
         console2.log("");
         console2.log("--- Token ---");
         console2.log("AssetManagerFacet    :", address(assetManagerFacet));
@@ -306,13 +314,35 @@ contract Deploy is Script {
         sels[6] = MetadataFacet.tokenInfo.selector;
     }
 
+    function _snapshotSelectors() internal pure returns (bytes4[] memory sels) {
+        sels = new bytes4[](8);
+        sels[0] = SnapshotFacet.createSnapshot.selector;
+        sels[1] = SnapshotFacet.recordHolder.selector;
+        sels[2] = SnapshotFacet.recordHoldersBatch.selector;
+        sels[3] = SnapshotFacet.getSnapshot.selector;
+        sels[4] = SnapshotFacet.getSnapshotBalance.selector;
+        sels[5] = SnapshotFacet.getTokenSnapshots.selector;
+        sels[6] = SnapshotFacet.getLatestSnapshotId.selector;
+        sels[7] = SnapshotFacet.nextSnapshotId.selector;
+    }
+
+    function _dividendSelectors() internal pure returns (bytes4[] memory sels) {
+        sels = new bytes4[](6);
+        sels[0] = DividendFacet.createDividend.selector;
+        sels[1] = DividendFacet.claimDividend.selector;
+        sels[2] = DividendFacet.getDividend.selector;
+        sels[3] = DividendFacet.hasClaimed.selector;
+        sels[4] = DividendFacet.claimableAmount.selector;
+        sels[5] = DividendFacet.getTokenDividends.selector;
+    }
+
     /*//////////////////////////////////////////////////////////////
                         POST-DEPLOY VERIFICATION
     //////////////////////////////////////////////////////////////*/
 
     function _verify(Diamond diamond, address expectedOwner) internal view {
         address[] memory facetAddrs = IDiamondLoupe(address(diamond)).facetAddresses();
-        require(facetAddrs.length == 16, "Deploy: expected 16 facets");
+        require(facetAddrs.length == 18, "Deploy: expected 18 facets");
 
         require(
             OwnershipFacet(address(diamond)).owner() == expectedOwner,

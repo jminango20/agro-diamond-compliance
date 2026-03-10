@@ -22,25 +22,25 @@ contract DiamondTest is DiamondHelper {
 
     function test_DeployRegistersOwner() public view {
         address actual = IDiamondLoupe(address(d.diamond)).facetAddress(IDiamondCut.diamondCut.selector);
-        assertEq(actual, address(d.cutFacet));
+        assertEq(actual, address(d.core.cutFacet));
     }
 
     function test_DiamondCutFacetRegisteredOnDeploy() public view {
         bytes4[] memory selectors =
-            IDiamondLoupe(address(d.diamond)).facetFunctionSelectors(address(d.cutFacet));
+            IDiamondLoupe(address(d.diamond)).facetFunctionSelectors(address(d.core.cutFacet));
         assertEq(selectors.length, 1);
         assertEq(selectors[0], IDiamondCut.diamondCut.selector);
     }
 
     function test_LoupeFacetRegistered() public view {
         bytes4[] memory selectors =
-            IDiamondLoupe(address(d.diamond)).facetFunctionSelectors(address(d.loupeFacet));
+            IDiamondLoupe(address(d.diamond)).facetFunctionSelectors(address(d.core.loupeFacet));
         assertEq(selectors.length, 5);
     }
 
     function test_FacetAddressesReturnsThreeFacets() public view {
         address[] memory addrs = IDiamondLoupe(address(d.diamond)).facetAddresses();
-        assertEq(addrs.length, 16);
+        assertEq(addrs.length, 18);
     }
 
     /*//////////////////////////////////////////////////////////////
