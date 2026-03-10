@@ -13,46 +13,32 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/renancorreadev/diamond-erc3643-protocol/packages/indexer/internal/config"
+	"github.com/renancorreadev/diamond-erc3643-protocol/packages/indexer/internal/store"
 )
 
 // Event signatures (keccak256 of the event signature string)
 var (
-	// SupplyFacet events
 	MintedSig         = crypto.Keccak256Hash([]byte("Minted(uint256,address,uint256)"))
 	BurnedSig         = crypto.Keccak256Hash([]byte("Burned(uint256,address,uint256)"))
 	ForcedTransferSig = crypto.Keccak256Hash([]byte("ForcedTransfer(uint256,address,address,uint256,bytes32)"))
-
-	// ERC-1155 standard event
 	TransferSingleSig = crypto.Keccak256Hash([]byte("TransferSingle(address,address,address,uint256,uint256)"))
 
-	// IdentityRegistryFacet events
+	AssetRegisteredSig    = crypto.Keccak256Hash([]byte("AssetRegistered(uint256,string,string,address)"))
 	IdentityRegisteredSig = crypto.Keccak256Hash([]byte("IdentityRegistered(address,address,uint16)"))
-	IdentityDeletedSig    = crypto.Keccak256Hash([]byte("IdentityDeleted(address)"))
-
-	// AssetManagerFacet events
-	AssetRegisteredSig = crypto.Keccak256Hash([]byte("AssetRegistered(uint256,string,string,address)"))
-
-	// SnapshotFacet events
-	SnapshotCreatedSig = crypto.Keccak256Hash([]byte("SnapshotCreated(uint256,uint256,uint256,uint64)"))
-
-	// DividendFacet events
-	DividendCreatedSig = crypto.Keccak256Hash([]byte("DividendCreated(uint256,uint256,uint256,uint256,address)"))
-	DividendClaimedSig = crypto.Keccak256Hash([]byte("DividendClaimed(uint256,address,uint256)"))
+	SnapshotCreatedSig    = crypto.Keccak256Hash([]byte("SnapshotCreated(uint256,uint256,uint256,uint64)"))
+	DividendCreatedSig    = crypto.Keccak256Hash([]byte("DividendCreated(uint256,uint256,uint256,uint256,address)"))
+	DividendClaimedSig    = crypto.Keccak256Hash([]byte("DividendClaimed(uint256,address,uint256)"))
 )
 
-// Indexer subscribes to Diamond contract events and maintains in-memory state.
+// Indexer subscribes to Diamond contract events and persists them to RocksDB.
 type Indexer struct {
-	cfg    *config.Config
-	state  *State
-	client *ethclient.Client
+	cfg   *config.Config
+	store *store.Store
 }
 
 // New creates a new Indexer.
-func New(cfg *config.Config, state *State) *Indexer {
-	return &Indexer{
-		cfg:   cfg,
-		state: state,
-	}
+func New(cfg *config.Config, store *store.Store) *Indexer {
+	return &Indexer{cfg: cfg, store: store}
 }
 
 // Run connects to the node via WebSocket and starts indexing events.
@@ -61,7 +47,6 @@ func (idx *Indexer) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to connect to node: %w", err)
 	}
-	idx.client = client
 	defer client.Close()
 
 	query := ethereum.FilterQuery{
@@ -109,23 +94,26 @@ func (idx *Indexer) handleLog(vLog types.Log) {
 	case TransferSingleSig:
 		idx.handleTransferSingle(vLog)
 	default:
-		// Log other known events for observability
 		switch sig {
 		case AssetRegisteredSig:
-			log.Printf("[indexer] AssetRegistered event at block %d", vLog.BlockNumber)
+			log.Printf("[indexer] AssetRegistered block=%d", vLog.BlockNumber)
 		case IdentityRegisteredSig:
-			log.Printf("[indexer] IdentityRegistered event at block %d", vLog.BlockNumber)
+			log.Printf("[indexer] IdentityRegistered block=%d", vLog.BlockNumber)
 		case SnapshotCreatedSig:
-			log.Printf("[indexer] SnapshotCreated event at block %d", vLog.BlockNumber)
+			log.Printf("[indexer] SnapshotCreated block=%d", vLog.BlockNumber)
 		case DividendCreatedSig:
-			log.Printf("[indexer] DividendCreated event at block %d", vLog.BlockNumber)
+			log.Printf("[indexer] DividendCreated block=%d", vLog.BlockNumber)
 		case DividendClaimedSig:
-			log.Printf("[indexer] DividendClaimed event at block %d", vLog.BlockNumber)
+			log.Printf("[indexer] DividendClaimed block=%d", vLog.BlockNumber)
 		}
+	}
+
+	// Update cursor
+	if err := idx.store.SetCursor(vLog.BlockNumber); err != nil {
+		log.Printf("[indexer] failed to update cursor: %v", err)
 	}
 }
 
-// handleMinted processes Minted(uint256 indexed tokenId, address indexed to, uint256 amount)
 func (idx *Indexer) handleMinted(vLog types.Log) {
 	if len(vLog.Topics) < 3 {
 		return
@@ -134,12 +122,14 @@ func (idx *Indexer) handleMinted(vLog types.Log) {
 	to := common.BytesToAddress(vLog.Topics[2].Bytes())
 	amount := new(big.Int).SetBytes(vLog.Data)
 
-	idx.state.RecordMint(tokenID, to, amount, vLog.TxHash, vLog.BlockNumber)
+	if err := idx.store.RecordMint(tokenID.String(), to, amount, vLog.TxHash, vLog.BlockNumber, vLog.Index); err != nil {
+		log.Printf("[indexer] RecordMint error: %v", err)
+		return
+	}
 	log.Printf("[indexer] Minted tokenId=%s to=%s amount=%s block=%d",
 		tokenID, to.Hex(), amount, vLog.BlockNumber)
 }
 
-// handleBurned processes Burned(uint256 indexed tokenId, address indexed from, uint256 amount)
 func (idx *Indexer) handleBurned(vLog types.Log) {
 	if len(vLog.Topics) < 3 {
 		return
@@ -148,12 +138,14 @@ func (idx *Indexer) handleBurned(vLog types.Log) {
 	from := common.BytesToAddress(vLog.Topics[2].Bytes())
 	amount := new(big.Int).SetBytes(vLog.Data)
 
-	idx.state.RecordBurn(tokenID, from, amount, vLog.TxHash, vLog.BlockNumber)
+	if err := idx.store.RecordBurn(tokenID.String(), from, amount, vLog.TxHash, vLog.BlockNumber, vLog.Index); err != nil {
+		log.Printf("[indexer] RecordBurn error: %v", err)
+		return
+	}
 	log.Printf("[indexer] Burned tokenId=%s from=%s amount=%s block=%d",
 		tokenID, from.Hex(), amount, vLog.BlockNumber)
 }
 
-// handleForcedTransfer processes ForcedTransfer(uint256 indexed tokenId, address indexed from, address indexed to, uint256 amount, bytes32 reasonCode)
 func (idx *Indexer) handleForcedTransfer(vLog types.Log) {
 	if len(vLog.Topics) < 4 {
 		return
@@ -163,12 +155,14 @@ func (idx *Indexer) handleForcedTransfer(vLog types.Log) {
 	to := common.BytesToAddress(vLog.Topics[3].Bytes())
 	amount := new(big.Int).SetBytes(vLog.Data[:32])
 
-	idx.state.RecordTransfer(tokenID, from, to, amount, "forced_transfer", vLog.TxHash, vLog.BlockNumber)
+	if err := idx.store.RecordTransfer(tokenID.String(), from, to, amount, "forced_transfer", vLog.TxHash, vLog.BlockNumber, vLog.Index); err != nil {
+		log.Printf("[indexer] RecordTransfer error: %v", err)
+		return
+	}
 	log.Printf("[indexer] ForcedTransfer tokenId=%s from=%s to=%s amount=%s block=%d",
 		tokenID, from.Hex(), to.Hex(), amount, vLog.BlockNumber)
 }
 
-// handleTransferSingle processes TransferSingle(address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value)
 func (idx *Indexer) handleTransferSingle(vLog types.Log) {
 	if len(vLog.Topics) < 4 || len(vLog.Data) < 64 {
 		return
@@ -179,13 +173,14 @@ func (idx *Indexer) handleTransferSingle(vLog types.Log) {
 	amount := new(big.Int).SetBytes(vLog.Data[32:64])
 
 	zeroAddr := common.Address{}
-
-	// Skip mint/burn — already handled by Minted/Burned events
 	if from == zeroAddr || to == zeroAddr {
-		return
+		return // skip mint/burn — handled by Minted/Burned
 	}
 
-	idx.state.RecordTransfer(tokenID, from, to, amount, "transfer", vLog.TxHash, vLog.BlockNumber)
+	if err := idx.store.RecordTransfer(tokenID.String(), from, to, amount, "transfer", vLog.TxHash, vLog.BlockNumber, vLog.Index); err != nil {
+		log.Printf("[indexer] RecordTransfer error: %v", err)
+		return
+	}
 	log.Printf("[indexer] Transfer tokenId=%s from=%s to=%s amount=%s block=%d",
 		tokenID, from.Hex(), to.Hex(), amount, vLog.BlockNumber)
 }

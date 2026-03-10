@@ -2,7 +2,11 @@ module github.com/renancorreadev/diamond-erc3643-protocol/packages/indexer
 
 go 1.24.5
 
-require github.com/ethereum/go-ethereum v1.17.1
+require (
+	github.com/ethereum/go-ethereum v1.17.1
+	github.com/graphql-go/graphql v0.8.1
+	github.com/linxGnu/grocksdb v1.10.7
+)
 
 require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
