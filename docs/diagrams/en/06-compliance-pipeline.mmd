@@ -1,0 +1,54 @@
+sequenceDiagram
+    participant User as Investor
+    participant ERC as ERC1155Facet
+    participant Freeze as FreezeStorage
+    participant Asset as AssetStorage
+    participant Balance as ERC1155Storage
+    participant Router as ComplianceRouterFacet
+    participant Module as IComplianceModule
+    participant Supply as SupplyStorage
+
+    User->>ERC: safeTransferFrom(from, to, tokenId, amount)
+
+    Note over ERC: Step 1 — Global Checks
+    ERC->>Freeze: globalPaused?
+    Freeze-->>ERC: false
+    ERC->>Freeze: globalFreeze[from]?
+    Freeze-->>ERC: false
+    ERC->>Freeze: globalFreeze[to]?
+    Freeze-->>ERC: false
+
+    Note over ERC: Step 2 — Asset Checks
+    ERC->>Asset: configs[tokenId].exists?
+    Asset-->>ERC: true
+    ERC->>Asset: configs[tokenId].paused?
+    Asset-->>ERC: false
+    ERC->>Freeze: assetFreeze[tokenId][from]?
+    Freeze-->>ERC: false
+    ERC->>Freeze: lockupExpiry[tokenId][from] <= now?
+    Freeze-->>ERC: true
+
+    Note over ERC: Step 3 — Balance Check
+    ERC->>Balance: partitions[tokenId][from].free
+    Balance-->>ERC: 1000
+    ERC->>Freeze: frozenAmount[tokenId][from]
+    Freeze-->>ERC: 200
+    Note over ERC: available = 1000 - 200 = 800 >= amount ✓
+
+    Note over ERC: Step 4 — Compliance Check
+    ERC->>Asset: configs[tokenId].complianceModule
+    Asset-->>ERC: 0xModuleAddr
+    ERC->>Router: canTransfer(tokenId, from, to, amount)
+    Router->>Module: canTransfer(tokenId, from, to, amount, "")
+    Module-->>Router: (true, 0x0)
+    Router-->>ERC: true ✓
+
+    Note over ERC: Step 5 — Execute
+    ERC->>Balance: from.free -= amount
+    ERC->>Balance: to.free += amount
+    ERC->>Supply: update holder tracking
+    ERC-->>User: emit TransferSingle
+
+    Note over ERC: Step 6 — Post-Hook
+    ERC->>Router: transferred(tokenId, from, to, amount)
+    Router->>Module: transferred(tokenId, from, to, amount)

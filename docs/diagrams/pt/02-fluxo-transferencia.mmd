@@ -1,0 +1,55 @@
+flowchart TD
+    Start(["safeTransferFrom(from, to, tokenId, amount)"])
+
+    Start --> G1{"Protocolo<br/>pausado?"}
+    G1 -->|sim| REVERT1["REVERT<br/>ProtocolPaused"]
+    G1 -->|não| G2{"Remetente ou destinatário<br/>congelado globalmente?"}
+    G2 -->|sim| REVERT2["REVERT<br/>WalletFrozenGlobal"]
+    G2 -->|não| A1
+
+    A1{"Ativo<br/>registrado?"}
+    A1 -->|não| REVERT3["REVERT<br/>AssetNotRegistered"]
+    A1 -->|sim| A2{"Ativo<br/>pausado?"}
+    A2 -->|sim| REVERT4["REVERT<br/>AssetPaused"]
+    A2 -->|não| A3{"Carteira congelada<br/>para este ativo?"}
+    A3 -->|sim| REVERT5["REVERT<br/>WalletFrozenAsset"]
+    A3 -->|não| A4{"Lockup<br/>expirou?"}
+    A4 -->|não| REVERT6["REVERT<br/>LockupActive"]
+    A4 -->|sim| B1
+
+    B1{"saldo livre<br/>- quantidade congelada<br/>>= amount?"}
+    B1 -->|não| REVERT7["REVERT<br/>InsufficientFreeBalance"]
+    B1 -->|sim| C1
+
+    C1{"complianceModule<br/>definido para tokenId?"}
+    C1 -->|não| EXEC
+    C1 -->|sim| C2{"module.canTransfer()<br/>retorna true?"}
+    C2 -->|não| REVERT8["REVERT<br/>ComplianceCheckFailed"]
+    C2 -->|sim| EXEC
+
+    EXEC["Executar Transferência"]
+    EXEC --> E1["from.free -= amount"]
+    EXEC --> E2["to.free += amount"]
+    EXEC --> E3["Atualizar rastreamento de holders"]
+    EXEC --> E4["Emitir TransferSingle"]
+
+    E1 & E2 & E3 & E4 --> POST
+
+    POST{"complianceModule<br/>existe?"}
+    POST -->|sim| HOOK["module.transferred(tokenId, from, to, amount)"]
+    POST -->|não| DONE
+    HOOK --> DONE(["Transferência Concluída"])
+
+    classDef start fill:#4f46e5,stroke:#818cf8,color:#fff,stroke-width:2px
+    classDef check fill:#1e293b,stroke:#475569,color:#f1f5f9
+    classDef revert fill:#7f1d1d,stroke:#ef4444,color:#fca5a5
+    classDef exec fill:#064e3b,stroke:#10b981,color:#a7f3d0
+    classDef post fill:#1e1b4b,stroke:#8b5cf6,color:#c4b5fd
+    classDef done fill:#059669,stroke:#10b981,color:#fff,stroke-width:2px
+
+    class Start start
+    class G1,G2,A1,A2,A3,A4,B1,C1,C2,POST check
+    class REVERT1,REVERT2,REVERT3,REVERT4,REVERT5,REVERT6,REVERT7,REVERT8 revert
+    class EXEC,E1,E2,E3,E4 exec
+    class HOOK post
+    class DONE done

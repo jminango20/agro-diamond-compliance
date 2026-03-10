@@ -1,0 +1,45 @@
+graph TD
+    subgraph Registration["1. Registro do Ativo"]
+        REG["registerAsset()<br/><b>tokenId: 1</b><br/>nome: Edifício Aurora<br/>símbolo: AURORA<br/>supplyCap: 0<br/>issuer: 0xOwner<br/>complianceModule: MaxBalance"]
+    end
+
+    subgraph GroupCreation["2. Criação do Grupo"]
+        GRP["createGroup()<br/><b>groupId: 1</b><br/>parentTokenId: 1<br/>nome: Aurora Apartamentos<br/>maxUnits: 100"]
+    end
+
+    subgraph LazyMint["3. Emissão Sob Demanda (na venda)"]
+        direction LR
+        APT1["mintUnit()<br/><b>Apto 101</b><br/>tokenId: (1<<128)|1<br/>investidor: Alice<br/>frações: 500"]
+        APT2["mintUnit()<br/><b>Apto 102</b><br/>tokenId: (1<<128)|2<br/>investidor: Bob<br/>frações: 300"]
+        APT3["mintUnit()<br/><b>Apto 103</b><br/>tokenId: (1<<128)|3<br/>investidor: Carol<br/>frações: 1000"]
+    end
+
+    subgraph SecondaryMarket["4. Mercado Secundário"]
+        T1["Alice transfere 100 frações<br/>do Apto 101 para Dave"]
+        T2["Verificação de compliance:<br/>módulo MaxBalance valida"]
+        T3["Verificação de identidade:<br/>Dave é KYC verificado"]
+    end
+
+    subgraph Dividend["5. Distribuição de Aluguel"]
+        S1["createSnapshot()<br/>capturar saldos de todos os holders"]
+        D1["createDividend()<br/>10 ETH total para Apto 101<br/>vinculado ao snapshot"]
+        CL1["Alice resgata: 8/10 ETH<br/>(400/500 frações)"]
+        CL2["Dave resgata: 2/10 ETH<br/>(100/500 frações)"]
+    end
+
+    Registration -->|"ativo pai existe"| GroupCreation
+    GroupCreation -->|"grupo pronto"| LazyMint
+    LazyMint -->|"tokens em circulação"| SecondaryMarket
+    SecondaryMarket -->|"fim do mês"| Dividend
+
+    classDef reg fill:#1e1b4b,stroke:#6366f1,color:#c7d2fe
+    classDef group fill:#312e81,stroke:#818cf8,color:#e0e7ff
+    classDef mint fill:#064e3b,stroke:#10b981,color:#a7f3d0
+    classDef market fill:#78350f,stroke:#f59e0b,color:#fef3c7
+    classDef dividend fill:#134e4a,stroke:#06b6d4,color:#a5f3fc
+
+    class REG reg
+    class GRP group
+    class APT1,APT2,APT3 mint
+    class T1,T2,T3 market
+    class S1,D1,CL1,CL2 dividend

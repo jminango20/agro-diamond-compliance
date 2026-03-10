@@ -1,0 +1,49 @@
+flowchart LR
+    subgraph Step1["1. createGroup()"]
+        direction TB
+        CG["Owner / COMPLIANCE_ADMIN"]
+        CG --> REG["Register group"]
+        REG --> PARENT["Link to parent tokenId"]
+        PARENT --> MAX["Set maxUnits<br/><i>0 = unlimited</i>"]
+        MAX --> GID["Return groupId<br/><i>auto-increment</i>"]
+        COST1["~215k gas"]
+    end
+
+    subgraph Step2["2. mintUnit() — on demand"]
+        direction TB
+        MU["ISSUER / COMPLIANCE_ADMIN / Owner"]
+        MU --> CHILD_ID["Generate childTokenId<br/><i>(groupId << 128) | unitIndex</i>"]
+        CHILD_ID --> INHERIT["Inherit from parent:<br/>identityProfile<br/>complianceModule<br/>issuer<br/>allowedCountries"]
+        INHERIT --> REG_CHILD["Register child asset<br/><i>in AssetStorage</i>"]
+        REG_CHILD --> MINT["Mint fractions<br/>to investor"]
+        MINT --> TRACK["Update holder tracking<br/>+ group state"]
+        COST2["~600k gas per unit"]
+    end
+
+    subgraph Result["On-Chain State"]
+        direction TB
+        GROUP["AssetGroup #1"]
+        GROUP --- P["Parent: tokenId 1<br/><i>Edificio Aurora</i>"]
+        GROUP --- C1["Child: tokenId (1<<128)|1<br/><i>Apt 101 — 500 fractions</i>"]
+        GROUP --- C2["Child: tokenId (1<<128)|2<br/><i>Apt 102 — 300 fractions</i>"]
+        GROUP --- C3["Child: tokenId (1<<128)|3<br/><i>Apt 103 — 1000 fractions</i>"]
+        GROUP -.- C4["Apt 104<br/><i>not yet on-chain</i>"]
+        GROUP -.- C5["Apt 105<br/><i>not yet on-chain</i>"]
+    end
+
+    Step1 -->|"group created"| Step2
+    Step2 -->|"child registered + minted"| Result
+
+    classDef step1 fill:#1e1b4b,stroke:#6366f1,color:#c7d2fe
+    classDef step2 fill:#064e3b,stroke:#10b981,color:#a7f3d0
+    classDef result fill:#1e293b,stroke:#475569,color:#f1f5f9
+    classDef minted fill:#059669,stroke:#10b981,color:#fff
+    classDef unminted fill:#334155,stroke:#64748b,color:#94a3b8,stroke-dasharray: 5 5
+    classDef cost fill:#78350f,stroke:#f59e0b,color:#fef3c7
+
+    class CG,REG,PARENT,MAX,GID step1
+    class MU,CHILD_ID,INHERIT,REG_CHILD,MINT,TRACK step2
+    class GROUP,P result
+    class C1,C2,C3 minted
+    class C4,C5 unminted
+    class COST1,COST2 cost

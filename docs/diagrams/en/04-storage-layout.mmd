@@ -1,0 +1,53 @@
+graph LR
+    subgraph Diamond["Diamond Proxy Address Space"]
+        direction TB
+
+        subgraph Slot1["Slot: keccak('diamond.rwa.app.storage') - 1"]
+            APP["LibAppStorage<br/>───────────────<br/>contractOwner: address<br/>pendingOwner: address<br/>globalPaused: bool<br/>protocolVersion: uint16"]
+        end
+
+        subgraph Slot2["Slot: keccak('diamond.rwa.asset.storage') - 1"]
+            ASSET["LibAssetStorage<br/>───────────────<br/>configs[tokenId] → AssetConfig<br/>  .name, .symbol, .uri<br/>  .supplyCap, .totalSupply<br/>  .issuer, .complianceModule<br/>  .paused, .exists<br/>  .allowedCountries[]<br/>registeredTokenIds[]"]
+        end
+
+        subgraph Slot3["Slot: keccak('diamond.rwa.erc1155.storage') - 1"]
+            ERC["LibERC1155Storage<br/>───────────────<br/>partitions[tokenId][addr]<br/>  .free<br/>  .locked<br/>  .custody<br/>  .pendingSettlement<br/>operatorApprovals[own][op]"]
+        end
+
+        subgraph Slot4["Slot: keccak('diamond.rwa.supply.storage') - 1"]
+            SUP["LibSupplyStorage<br/>───────────────<br/>totalSupply[tokenId]<br/>holderCount[tokenId]<br/>isHolder[tokenId][addr]"]
+        end
+
+        subgraph Slot5["Slot: keccak('diamond.rwa.freeze.storage') - 1"]
+            FREEZE["LibFreezeStorage<br/>───────────────<br/>globalFreeze[addr]<br/>assetFreeze[tokenId][addr]<br/>frozenAmount[tokenId][addr]<br/>lockupExpiry[tokenId][addr]"]
+        end
+
+        subgraph Slot6["Slot: keccak('diamond.rwa.access.storage') - 1"]
+            ACCESS["LibAccessStorage<br/>───────────────<br/>roles[role][account]<br/>roleAdmin[role]"]
+        end
+
+        subgraph Slot7["Slot: keccak('diamond.rwa.identity.storage') - 1"]
+            ID["LibIdentityStorage<br/>───────────────<br/>walletToIdentity[addr]<br/>walletCountry[addr]<br/>profiles[profileId]<br/>  .requiredClaimTopics<br/>  .trustedIssuers<br/>verifiedCache[addr][profileId]"]
+        end
+
+        subgraph Slot8["Slot: keccak('diamond.rwa.compliance.storage') - 1"]
+            COMP["LibComplianceStorage<br/>───────────────<br/>tokenModule[tokenId]<br/>registeredModules[addr]"]
+        end
+
+        subgraph Slot9["Slot: keccak('diamond.rwa.snapshot.storage') - 1"]
+            SNAP["LibSnapshotStorage<br/>───────────────<br/>snapshots[snapId]<br/>  .tokenId, .totalSupply<br/>  .balances[holder]<br/>tokenSnapshots[tokenId][]<br/>nextSnapshotId"]
+        end
+
+        subgraph Slot10["Slot: keccak('diamond.rwa.dividend.storage') - 1"]
+            DIV["LibDividendStorage<br/>───────────────<br/>dividends[dividendId]<br/>  .snapshotId, .totalAmount<br/>  .paymentToken<br/>  .claimed[addr]<br/>tokenDividends[tokenId][]"]
+        end
+
+        subgraph Slot11["Slot: keccak('diamond.rwa.assetgroup.storage') - 1"]
+            GRP["LibAssetGroupStorage<br/>───────────────<br/>groups[groupId]<br/>  .parentTokenId, .name<br/>  .maxUnits, .unitCount<br/>groupChildren[groupId][]<br/>childToGroup[childTokenId]<br/>registeredGroupIds[]"]
+        end
+    end
+
+    classDef slot fill:#1e293b,stroke:#475569,color:#e2e8f0
+    classDef lib fill:#0f172a,stroke:#334155,color:#94a3b8,text-align:left
+
+    class APP,ASSET,ERC,SUP,FREEZE,ACCESS,ID,COMP,SNAP,DIV,GRP lib

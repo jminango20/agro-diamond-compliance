@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Diamond ERC-3643 — Diagramas</title>
+<style>
+  body { font-family: -apple-system, sans-serif; background: #0f172a; color: #e2e8f0; margin: 0; padding: 20px 40px; }
+  h1 { font-size: 24px; font-weight: 800; margin-bottom: 4px; }
+  h1 span { background: linear-gradient(135deg, #818cf8, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .sub { color: #94a3b8; font-size: 13px; margin-bottom: 30px; }
+  .diagram { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 24px; margin-bottom: 24px; overflow-x: auto; }
+  .diagram h2 { font-size: 16px; margin: 0 0 16px; color: #818cf8; }
+  .mermaid { display: flex; justify-content: center; }
+  .lang { position: fixed; top: 20px; right: 40px; }
+  .lang a { color: #818cf8; text-decoration: none; font-size: 14px; padding: 6px 12px; border: 1px solid #334155; border-radius: 6px; }
+  .lang a:hover { background: #1e293b; }
+</style>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: true, theme: 'dark', themeVariables: { darkMode: true } });
+</script>
+</head>
+<body>
+<div class="lang"><a href="../en/viewer.html">🇺🇸 English</a></div>
+<h1><span>Diamond ERC-3643</span> — Diagramas de Arquitetura</h1>
+<p class="sub">9 diagramas Mermaid cobrindo arquitetura do proxy, storage, fluxos, roles e exemplos reais.</p>
+
+<div class="diagram">
+<h2>1. Arquitetura de Alto Nível</h2>
+<pre class="mermaid" id="d1"></pre>
+</div>
+
+<div class="diagram">
+<h2>2. Fluxo de Transferência Regulada</h2>
+<pre class="mermaid" id="d2"></pre>
+</div>
+
+<div class="diagram">
+<h2>3. Grupo de Ativos — Emissão Sob Demanda</h2>
+<pre class="mermaid" id="d3"></pre>
+</div>
+
+<div class="diagram">
+<h2>4. Layout de Storage (11 Namespaces)</h2>
+<pre class="mermaid" id="d4"></pre>
+</div>
+
+<div class="diagram">
+<h2>5. Papéis e Permissões</h2>
+<pre class="mermaid" id="d5"></pre>
+</div>
+
+<div class="diagram">
+<h2>6. Pipeline de Compliance (Sequência)</h2>
+<pre class="mermaid" id="d6"></pre>
+</div>
+
+<div class="diagram">
+<h2>7. Stack Tecnológico Completo</h2>
+<pre class="mermaid" id="d7"></pre>
+</div>
+
+<div class="diagram">
+<h2>8. Ciclo de Vida do Token (Máquina de Estados)</h2>
+<pre class="mermaid" id="d8"></pre>
+</div>
+
+<div class="diagram">
+<h2>9. Exemplo Imobiliário — Ponta a Ponta</h2>
+<pre class="mermaid" id="d9"></pre>
+</div>
+
+<script>
+const files = [
+  ['d1', '01-arquitetura-alto-nivel.mmd'],
+  ['d2', '02-fluxo-transferencia.mmd'],
+  ['d3', '03-grupo-ativos-lazy-mint.mmd'],
+  ['d4', '04-layout-storage.mmd'],
+  ['d5', '05-papeis-permissoes.mmd'],
+  ['d6', '06-pipeline-compliance.mmd'],
+  ['d7', '07-stack-completo.mmd'],
+  ['d8', '08-ciclo-emissao-queima.mmd'],
+  ['d9', '09-exemplo-imobiliario.mmd'],
+];
+
+files.forEach(([id, file]) => {
+  fetch(file)
+    .then(r => r.text())
+    .then(text => {
+      document.getElementById(id).textContent = text;
+    })
+    .catch(() => {
+      document.getElementById(id).textContent = 'graph LR\n  A["Não foi possível carregar ' + file + '"]';
+    });
+});
+</script>
+</body>
+</html>

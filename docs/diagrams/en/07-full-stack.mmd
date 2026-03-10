@@ -1,0 +1,70 @@
+graph TB
+    subgraph Frontend["Frontend — React + viem"]
+        UI["Investor Dashboard"]
+        Admin["Admin Panel"]
+        Compliance["Compliance Dashboard"]
+    end
+
+    subgraph Indexer["Indexer Service — Go"]
+        WS["WebSocket Subscriber<br/><i>eth_subscribe(logs)</i>"]
+        Handler["Event Handler<br/><i>decode Minted, Burned,<br/>TransferSingle, etc.</i>"]
+        RDB[("RocksDB<br/><i>persistent key-value store</i>")]
+        GQL["GraphQL API<br/><i>POST /graphql</i>"]
+        Play["Playground<br/><i>GET /</i>"]
+        Health["Health Check<br/><i>GET /health</i>"]
+
+        WS --> Handler
+        Handler --> RDB
+        RDB --> GQL
+    end
+
+    subgraph Blockchain["Blockchain — EVM"]
+        Diamond["Diamond Proxy<br/><i>single contract address</i>"]
+
+        subgraph Facets["19 Facets"]
+            F1["Core (3)"]
+            F2["Security (3)"]
+            F3["Token (4)"]
+            F4["Identity (3)"]
+            F5["Compliance (1)"]
+            F6["RWA (5)"]
+        end
+
+        subgraph StorageLayer["11 Storage Libraries"]
+            SL["Isolated slots via<br/>keccak256('diamond.rwa.X.storage') - 1"]
+        end
+
+        subgraph Modules["Compliance Modules"]
+            M1["MaxBalanceModule"]
+            M2["MaxHoldersModule"]
+        end
+
+        Diamond --> Facets
+        Facets --> StorageLayer
+        F5 -.-> Modules
+    end
+
+    UI & Admin & Compliance -->|"GraphQL queries"| GQL
+    UI & Admin & Compliance -->|"JSON-RPC (write txs)"| Diamond
+    WS <-->|"WebSocket"| Diamond
+
+    subgraph Networks["Supported Networks"]
+        N1["Polygon Amoy (testnet)"]
+        N2["Polygon PoS"]
+        N3["Ethereum"]
+        N4["Any EVM"]
+    end
+
+    Diamond --- Networks
+
+    classDef frontend fill:#2e1065,stroke:#8b5cf6,color:#c4b5fd
+    classDef indexer fill:#134e4a,stroke:#06b6d4,color:#a5f3fc
+    classDef blockchain fill:#1e1b4b,stroke:#6366f1,color:#c7d2fe
+    classDef db fill:#1c1917,stroke:#78716c,color:#d6d3d1
+    classDef network fill:#1e293b,stroke:#475569,color:#94a3b8
+
+    class UI,Admin,Compliance frontend
+    class WS,Handler,GQL,Play,Health indexer
+    class RDB db
+    class Diamond,F1,F2,F3,F4,F5,F6,SL,M1,M2 blockchain
+    class N1,N2,N3,N4 network

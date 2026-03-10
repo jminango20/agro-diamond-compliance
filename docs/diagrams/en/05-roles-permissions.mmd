@@ -1,0 +1,74 @@
+graph TD
+    subgraph Roles["Access Control"]
+        OWNER["👑 Owner<br/><i>Ownable2Step</i>"]
+        CADMIN["COMPLIANCE_ADMIN"]
+        ISSUER["ISSUER_ROLE"]
+        TAGENT["TRANSFER_AGENT"]
+        HOLDER["Token Holder<br/><i>any verified wallet</i>"]
+    end
+
+    OWNER -->|"grantRole / revokeRole"| CADMIN
+    OWNER -->|"grantRole / revokeRole"| ISSUER
+    OWNER -->|"grantRole / revokeRole"| TAGENT
+
+    subgraph OwnerOps["Owner Operations"]
+        O1["diamondCut — upgrade facets"]
+        O2["transferOwnership"]
+        O3["setIssuer — change asset minter"]
+        O4["emergencyPause — circuit breaker"]
+        O5["setRoleAdmin — configure role hierarchy"]
+    end
+
+    subgraph ComplianceOps["Compliance Admin Operations"]
+        C1["registerAsset — new tokenId"]
+        C2["createGroup — asset hierarchy"]
+        C3["setComplianceModule"]
+        C4["setIdentityProfile"]
+        C5["setSupplyCap"]
+        C6["setAllowedCountries"]
+        C7["registerIdentity — KYC link"]
+        C8["addTrustedIssuer"]
+    end
+
+    subgraph IssuerOps["Issuer Operations"]
+        I1["mint / batchMint"]
+        I2["burn"]
+        I3["mintUnit — lazy child asset"]
+        I4["mintUnitBatch"]
+        I5["createDividend"]
+    end
+
+    subgraph AgentOps["Transfer Agent Operations"]
+        T1["forcedTransfer — regulatory override"]
+        T2["recoverWallet — lost key recovery"]
+    end
+
+    subgraph HolderOps["Holder Operations"]
+        H1["safeTransferFrom — if compliance passes"]
+        H2["claimDividend"]
+        H3["setApprovalForAll"]
+    end
+
+    OWNER --> OwnerOps
+    CADMIN --> ComplianceOps
+    ISSUER --> IssuerOps
+    TAGENT --> AgentOps
+    HOLDER --> HolderOps
+
+    classDef owner fill:#7f1d1d,stroke:#ef4444,color:#fca5a5
+    classDef cadmin fill:#78350f,stroke:#f59e0b,color:#fef3c7
+    classDef issuer fill:#064e3b,stroke:#10b981,color:#a7f3d0
+    classDef agent fill:#164e63,stroke:#06b6d4,color:#a5f3fc
+    classDef holder fill:#1e293b,stroke:#475569,color:#94a3b8
+    classDef op fill:#0f172a,stroke:#334155,color:#e2e8f0
+
+    class OWNER owner
+    class CADMIN cadmin
+    class ISSUER issuer
+    class TAGENT agent
+    class HOLDER holder
+    class O1,O2,O3,O4,O5 op
+    class C1,C2,C3,C4,C5,C6,C7,C8 op
+    class I1,I2,I3,I4,I5 op
+    class T1,T2 op
+    class H1,H2,H3 op
