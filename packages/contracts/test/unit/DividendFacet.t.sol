@@ -60,10 +60,12 @@ contract DividendFacetTest is DiamondHelper {
     AccessControlFacet internal ac;
     MockERC20 internal payToken;
 
-    uint256 internal constant TOKEN_1 = 1;
+    uint256 internal TOKEN_1;
     bytes32 internal constant ISSUER_ROLE = keccak256("ISSUER_ROLE");
 
     uint256 internal snapshotId;
+
+    address[] internal emptyModules;
 
     function setUp() public {
         d = deployDiamond(owner);
@@ -77,15 +79,14 @@ contract DividendFacetTest is DiamondHelper {
 
         uint16[] memory countries = new uint16[](0);
         vm.startPrank(owner);
-        am.registerAsset(
+        TOKEN_1 = am.registerAsset(
             IAssetManager.RegisterAssetParams({
-                tokenId: TOKEN_1,
                 name: "Bond A",
                 symbol: "BNDA",
                 uri: "",
                 supplyCap: 100_000,
                 identityProfileId: 0,
-                complianceModule: address(0),
+                complianceModules: emptyModules,
                 issuer: owner,
                 allowedCountries: countries
             })

@@ -127,10 +127,12 @@ contract SupplyFacet {
 
         emit ForcedTransfer(tokenId, from, to, amount, reasonCode);
 
-        // Post-hook: compliance module gets notified even for forced transfers
-        address module = config.complianceModule;
-        if (module != address(0)) {
-            IComplianceModule(module).transferred(tokenId, from, to, amount);
+        // Post-hook: all compliance modules get notified even for forced transfers
+        address[] storage modules = config.complianceModules;
+        uint256 mLen = modules.length;
+        for (uint256 i; i < mLen;) {
+            IComplianceModule(modules[i]).transferred(tokenId, from, to, amount);
+            unchecked { ++i; }
         }
     }
 
@@ -222,10 +224,12 @@ contract SupplyFacet {
 
         emit Minted(tokenId, to, amount);
 
-        // Compliance post-hook
-        address module = config.complianceModule;
-        if (module != address(0)) {
-            IComplianceModule(module).minted(tokenId, to, amount);
+        // Compliance post-hooks
+        address[] storage modules = config.complianceModules;
+        uint256 mLen = modules.length;
+        for (uint256 i; i < mLen;) {
+            IComplianceModule(modules[i]).minted(tokenId, to, amount);
+            unchecked { ++i; }
         }
     }
 
@@ -248,10 +252,12 @@ contract SupplyFacet {
 
         emit Burned(tokenId, from, amount);
 
-        // Compliance post-hook
-        address module = config.complianceModule;
-        if (module != address(0)) {
-            IComplianceModule(module).burned(tokenId, from, amount);
+        // Compliance post-hooks
+        address[] storage modules = config.complianceModules;
+        uint256 mLen = modules.length;
+        for (uint256 i; i < mLen;) {
+            IComplianceModule(modules[i]).burned(tokenId, from, amount);
+            unchecked { ++i; }
         }
     }
 

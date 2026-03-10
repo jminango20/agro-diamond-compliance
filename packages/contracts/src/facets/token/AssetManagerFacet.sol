@@ -10,11 +10,13 @@ import {IAssetManager} from "../../interfaces/token/IAssetManager.sol";
                             ERRORS
 //////////////////////////////////////////////////////////////*/
 
-error AssetManagerFacet__AlreadyRegistered(uint256 tokenId);
 error AssetManagerFacet__NotRegistered(uint256 tokenId);
 error AssetManagerFacet__ZeroAddress();
 error AssetManagerFacet__EmptyString();
 error AssetManagerFacet__Unauthorized();
+error AssetManagerFacet__TooManyModules(uint256 count, uint256 max);
+error AssetManagerFacet__ModuleNotFound(address module);
+error AssetManagerFacet__ModuleAlreadyAdded(address module);
 
 /*//////////////////////////////////////////////////////////////
                             CONTRACT
@@ -24,61 +26,127 @@ error AssetManagerFacet__Unauthorized();
 /// @author Renan Correa <renan.correa@hubweb3.com>
 /// @notice Manages per-tokenId asset configuration (architecture §3 — Level 2).
 ///         Each tokenId is an independent asset class with its own regulatory config:
-///         identity profile, compliance module, issuer, supply cap, and jurisdictions.
+///         identity profile, compliance modules, issuer, supply cap, and jurisdictions.
+///         TokenIds are auto-incremented — callers never choose the ID.
 ///         Caller: Diamond owner or COMPLIANCE_ADMIN for config changes.
 /// @custom:security-contact renan.correa@hubweb3.com
 contract AssetManagerFacet {
+    /*//////////////////////////////////////////////////////////////
+                                CONSTANTS
+    //////////////////////////////////////////////////////////////*/
+
+    /// @dev Maximum compliance modules per tokenId to prevent unbounded loops in transfers.
+    uint256 internal constant MAX_COMPLIANCE_MODULES = 10;
+
     /*//////////////////////////////////////////////////////////////
                                 EVENTS
     //////////////////////////////////////////////////////////////*/
 
     event AssetRegistered(uint256 indexed tokenId, address indexed issuer, uint32 profileId);
     event AssetConfigUpdated(uint256 indexed tokenId);
-    event ComplianceModuleSet(uint256 indexed tokenId, address indexed module);
+    event ComplianceModulesSet(uint256 indexed tokenId, address[] modules);
+    event ComplianceModuleAdded(uint256 indexed tokenId, address indexed module);
+    event ComplianceModuleRemoved(uint256 indexed tokenId, address indexed module);
 
     /*//////////////////////////////////////////////////////////////
                         STATE-CHANGING FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Registers a new asset class (tokenId) with its full regulatory config.
-    ///         Accepts a params struct to avoid stack-too-deep on 9 arguments.
-    function registerAsset(IAssetManager.RegisterAssetParams calldata p) external {
+    /// @notice Registers a new asset class with auto-incremented tokenId.
+    /// @param p Asset registration parameters (name, symbol, modules, issuer, etc.)
+    /// @return tokenId The auto-generated token identifier
+    function registerAsset(IAssetManager.RegisterAssetParams calldata p)
+        external
+        returns (uint256 tokenId)
+    {
         _enforceComplianceAdminOrOwner();
         if (p.issuer == address(0)) revert AssetManagerFacet__ZeroAddress();
         if (bytes(p.name).length == 0) revert AssetManagerFacet__EmptyString();
         if (bytes(p.symbol).length == 0) revert AssetManagerFacet__EmptyString();
+        if (p.complianceModules.length > MAX_COMPLIANCE_MODULES) {
+            revert AssetManagerFacet__TooManyModules(p.complianceModules.length, MAX_COMPLIANCE_MODULES);
+        }
 
         AssetStorage storage s = LibAssetStorage.layout();
-        if (s.configs[p.tokenId].exists) revert AssetManagerFacet__AlreadyRegistered(p.tokenId);
+        tokenId = ++s.nextTokenId;
 
-        AssetConfig storage cfg = s.configs[p.tokenId];
+        AssetConfig storage cfg = s.configs[tokenId];
         cfg.name = p.name;
         cfg.symbol = p.symbol;
         cfg.uri = p.uri;
         cfg.supplyCap = p.supplyCap;
-        cfg.totalSupply = 0;
         cfg.identityProfileId = p.identityProfileId;
-        cfg.complianceModule = p.complianceModule;
+        cfg.complianceModules = p.complianceModules;
         cfg.issuer = p.issuer;
-        cfg.paused = false;
         cfg.exists = true;
         cfg.allowedCountries = p.allowedCountries;
 
-        s.registeredTokenIds.push(p.tokenId);
+        s.registeredTokenIds.push(tokenId);
 
-        emit AssetRegistered(p.tokenId, p.issuer, p.identityProfileId);
-        if (p.complianceModule != address(0)) {
-            emit ComplianceModuleSet(p.tokenId, p.complianceModule);
+        emit AssetRegistered(tokenId, p.issuer, p.identityProfileId);
+        if (p.complianceModules.length > 0) {
+            emit ComplianceModulesSet(tokenId, p.complianceModules);
         }
     }
 
-    /// @notice Replaces the compliance module for a tokenId.
-    ///         Pass address(0) to remove module (unrestricted transfers).
-    function setComplianceModule(uint256 tokenId, address module) external {
+    /// @notice Adds a compliance module to a tokenId's module list.
+    /// @param tokenId The asset class to modify
+    /// @param module The compliance module address to add
+    function addComplianceModule(uint256 tokenId, address module) external {
         _enforceComplianceAdminOrOwner();
         _requireRegistered(tokenId);
-        LibAssetStorage.layout().configs[tokenId].complianceModule = module;
-        emit ComplianceModuleSet(tokenId, module);
+        if (module == address(0)) revert AssetManagerFacet__ZeroAddress();
+
+        address[] storage modules = LibAssetStorage.layout().configs[tokenId].complianceModules;
+
+        uint256 len = modules.length;
+        for (uint256 i; i < len;) {
+            if (modules[i] == module) revert AssetManagerFacet__ModuleAlreadyAdded(module);
+            unchecked { ++i; }
+        }
+        if (len >= MAX_COMPLIANCE_MODULES) {
+            revert AssetManagerFacet__TooManyModules(len + 1, MAX_COMPLIANCE_MODULES);
+        }
+
+        modules.push(module);
+        emit ComplianceModuleAdded(tokenId, module);
+    }
+
+    /// @notice Removes a compliance module from a tokenId's module list.
+    ///         Uses swap-and-pop for gas efficiency (order not guaranteed).
+    /// @param tokenId The asset class to modify
+    /// @param module The compliance module address to remove
+    function removeComplianceModule(uint256 tokenId, address module) external {
+        _enforceComplianceAdminOrOwner();
+        _requireRegistered(tokenId);
+
+        address[] storage modules = LibAssetStorage.layout().configs[tokenId].complianceModules;
+        uint256 len = modules.length;
+
+        for (uint256 i; i < len;) {
+            if (modules[i] == module) {
+                modules[i] = modules[len - 1];
+                modules.pop();
+                emit ComplianceModuleRemoved(tokenId, module);
+                return;
+            }
+            unchecked { ++i; }
+        }
+        revert AssetManagerFacet__ModuleNotFound(module);
+    }
+
+    /// @notice Replaces all compliance modules for a tokenId.
+    ///         Pass empty array to remove all modules (unrestricted transfers).
+    /// @param tokenId The asset class to modify
+    /// @param modules The new compliance module addresses
+    function setComplianceModules(uint256 tokenId, address[] calldata modules) external {
+        _enforceComplianceAdminOrOwner();
+        _requireRegistered(tokenId);
+        if (modules.length > MAX_COMPLIANCE_MODULES) {
+            revert AssetManagerFacet__TooManyModules(modules.length, MAX_COMPLIANCE_MODULES);
+        }
+        LibAssetStorage.layout().configs[tokenId].complianceModules = modules;
+        emit ComplianceModulesSet(tokenId, modules);
     }
 
     /// @notice Updates the identity profile used for KYC verification on this asset.
@@ -133,6 +201,11 @@ contract AssetManagerFacet {
         return LibAssetStorage.layout().configs[tokenId];
     }
 
+    /// @notice Returns the compliance modules for a tokenId.
+    function getComplianceModules(uint256 tokenId) external view returns (address[] memory) {
+        return LibAssetStorage.layout().configs[tokenId].complianceModules;
+    }
+
     /// @notice Returns all registered tokenIds in registration order.
     function getRegisteredTokenIds() external view returns (uint256[] memory) {
         return LibAssetStorage.layout().registeredTokenIds;
@@ -141,6 +214,11 @@ contract AssetManagerFacet {
     /// @notice Returns true if the tokenId has been registered.
     function assetExists(uint256 tokenId) external view returns (bool) {
         return LibAssetStorage.layout().configs[tokenId].exists;
+    }
+
+    /// @notice Returns the current auto-increment counter for tokenIds.
+    function nextTokenId() external view returns (uint256) {
+        return LibAssetStorage.layout().nextTokenId;
     }
 
     /*//////////////////////////////////////////////////////////////

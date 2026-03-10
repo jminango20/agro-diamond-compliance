@@ -7,7 +7,7 @@ graph LR
         end
 
         subgraph Slot2["Slot: keccak('diamond.rwa.asset.storage') - 1"]
-            ASSET["LibAssetStorage<br/>───────────────<br/>configs[tokenId] → AssetConfig<br/>  .name, .symbol, .uri<br/>  .supplyCap, .totalSupply<br/>  .issuer, .complianceModule<br/>  .paused, .exists<br/>  .allowedCountries[]<br/>registeredTokenIds[]"]
+            ASSET["LibAssetStorage<br/>───────────────<br/>configs[tokenId] → AssetConfig<br/>  .name, .symbol, .uri<br/>  .supplyCap, .totalSupply<br/>  .issuer, .complianceModules[]<br/>  .paused, .exists<br/>  .allowedCountries[]<br/>registeredTokenIds[]<br/>nextTokenId"]
         end
 
         subgraph Slot3["Slot: keccak('diamond.rwa.erc1155.storage') - 1"]

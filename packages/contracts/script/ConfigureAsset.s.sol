@@ -64,16 +64,16 @@ contract ConfigureAsset is Script {
         // ── 2. Register asset ───────────────────────────────────────
 
         uint16[] memory countries = new uint16[](0);
+        address[] memory modules = new address[](0);
 
-        am.registerAsset(
+        uint256 registeredTokenId = am.registerAsset(
             IAssetManager.RegisterAssetParams({
-                tokenId: tokenId,
                 name: tokenName,
                 symbol: tokenSymbol,
                 uri: "",
                 supplyCap: supplyCap,
                 identityProfileId: 0,
-                complianceModule: address(0),
+                complianceModules: modules,
                 issuer: issuerAddr,
                 allowedCountries: countries
             })
@@ -83,7 +83,7 @@ contract ConfigureAsset is Script {
 
         console2.log("");
         console2.log("=== Asset Registered ===");
-        console2.log("Token ID       :", tokenId);
+        console2.log("Token ID       :", registeredTokenId);
         console2.log("Name           :", tokenName);
         console2.log("Symbol         :", tokenSymbol);
         console2.log("Supply Cap     :", supplyCap);

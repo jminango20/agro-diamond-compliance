@@ -29,11 +29,13 @@ contract RecoveryFacetTest is DiamondHelper {
     IdentityRegistryFacet internal ir;
     AccessControlFacet internal ac;
 
-    uint256 internal constant TOKEN_1 = 1;
-    uint256 internal constant TOKEN_2 = 2;
+    uint256 internal TOKEN_1;
+    uint256 internal TOKEN_2;
 
     bytes32 internal constant RECOVERY_AGENT = keccak256("RECOVERY_AGENT");
     bytes32 internal constant ISSUER_ROLE = keccak256("ISSUER_ROLE");
+
+    address[] internal emptyModules;
 
     function setUp() public {
         d = deployDiamond(owner);
@@ -49,28 +51,26 @@ contract RecoveryFacetTest is DiamondHelper {
         vm.startPrank(owner);
 
         // Register two assets
-        am.registerAsset(
+        TOKEN_1 = am.registerAsset(
             IAssetManager.RegisterAssetParams({
-                tokenId: TOKEN_1,
                 name: "Bond A",
                 symbol: "BNDA",
                 uri: "",
                 supplyCap: 0,
                 identityProfileId: 0,
-                complianceModule: address(0),
+                complianceModules: emptyModules,
                 issuer: owner,
                 allowedCountries: countries
             })
         );
-        am.registerAsset(
+        TOKEN_2 = am.registerAsset(
             IAssetManager.RegisterAssetParams({
-                tokenId: TOKEN_2,
                 name: "Bond B",
                 symbol: "BNDB",
                 uri: "",
                 supplyCap: 0,
                 identityProfileId: 0,
-                complianceModule: address(0),
+                complianceModules: emptyModules,
                 issuer: owner,
                 allowedCountries: countries
             })

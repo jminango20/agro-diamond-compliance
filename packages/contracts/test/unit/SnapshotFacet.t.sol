@@ -25,10 +25,12 @@ contract SnapshotFacetTest is DiamondHelper {
     AssetManagerFacet internal am;
     AccessControlFacet internal ac;
 
-    uint256 internal constant TOKEN_1 = 1;
-    uint256 internal constant TOKEN_2 = 2;
+    uint256 internal TOKEN_1;
+    uint256 internal TOKEN_2;
 
     bytes32 internal constant ISSUER_ROLE = keccak256("ISSUER_ROLE");
+
+    address[] internal emptyModules;
 
     function setUp() public {
         d = deployDiamond(owner);
@@ -40,28 +42,26 @@ contract SnapshotFacetTest is DiamondHelper {
 
         uint16[] memory countries = new uint16[](0);
         vm.startPrank(owner);
-        am.registerAsset(
+        TOKEN_1 = am.registerAsset(
             IAssetManager.RegisterAssetParams({
-                tokenId: TOKEN_1,
                 name: "Bond A",
                 symbol: "BNDA",
                 uri: "",
                 supplyCap: 100_000,
                 identityProfileId: 0,
-                complianceModule: address(0),
+                complianceModules: emptyModules,
                 issuer: owner,
                 allowedCountries: countries
             })
         );
-        am.registerAsset(
+        TOKEN_2 = am.registerAsset(
             IAssetManager.RegisterAssetParams({
-                tokenId: TOKEN_2,
                 name: "Bond B",
                 symbol: "BNDB",
                 uri: "",
                 supplyCap: 0,
                 identityProfileId: 0,
-                complianceModule: address(0),
+                complianceModules: emptyModules,
                 issuer: owner,
                 allowedCountries: countries
             })

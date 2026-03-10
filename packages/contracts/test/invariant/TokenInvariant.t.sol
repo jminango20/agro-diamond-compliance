@@ -18,7 +18,7 @@ contract TokenInvariant is DiamondHelper {
     TokenHandler internal handler;
 
     address internal owner = makeAddr("owner");
-    uint256 internal constant TOKEN_1 = 1;
+    uint256 internal TOKEN_1;
     uint256 internal constant SUPPLY_CAP = 1_000_000;
     uint256 internal constant ACTOR_COUNT = 5;
 
@@ -26,6 +26,8 @@ contract TokenInvariant is DiamondHelper {
     ERC1155Facet internal token;
 
     address[] internal actors;
+
+    address[] internal emptyModules;
 
     function setUp() public {
         d = deployDiamond(owner);
@@ -35,15 +37,14 @@ contract TokenInvariant is DiamondHelper {
         // Register asset
         uint16[] memory countries = new uint16[](0);
         vm.startPrank(owner);
-        AssetManagerFacet(address(d.diamond)).registerAsset(
+        TOKEN_1 = AssetManagerFacet(address(d.diamond)).registerAsset(
             IAssetManager.RegisterAssetParams({
-                tokenId: TOKEN_1,
                 name: "Bond A",
                 symbol: "BNDA",
                 uri: "",
                 supplyCap: SUPPLY_CAP,
                 identityProfileId: 0,
-                complianceModule: address(0),
+                complianceModules: emptyModules,
                 issuer: owner,
                 allowedCountries: countries
             })

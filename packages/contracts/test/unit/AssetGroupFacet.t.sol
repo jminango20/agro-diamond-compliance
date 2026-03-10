@@ -31,13 +31,15 @@ contract AssetGroupFacetTest is DiamondHelper {
     address internal investor2 = makeAddr("investor2");
     address internal stranger = makeAddr("stranger");
 
-    uint256 internal constant PARENT_TOKEN_ID = 1;
+    uint256 internal PARENT_TOKEN_ID;
     uint256 internal constant PARENT_SUPPLY_CAP = 1_000_000;
 
     AssetGroupFacet internal groupFacet;
     AssetManagerFacet internal assetManager;
     SupplyFacet internal supply;
     ERC1155Facet internal erc1155;
+
+    address[] internal emptyModules;
 
     function setUp() public {
         d = deployDiamond(owner);
@@ -49,15 +51,14 @@ contract AssetGroupFacetTest is DiamondHelper {
         // Register parent asset
         uint16[] memory countries = new uint16[](0);
         vm.prank(owner);
-        assetManager.registerAsset(
+        PARENT_TOKEN_ID = assetManager.registerAsset(
             IAssetManager.RegisterAssetParams({
-                tokenId: PARENT_TOKEN_ID,
                 name: "Edificio Aurora",
                 symbol: "AURORA",
                 uri: "ipfs://aurora",
                 supplyCap: PARENT_SUPPLY_CAP,
                 identityProfileId: 0,
-                complianceModule: address(0),
+                complianceModules: emptyModules,
                 issuer: owner,
                 allowedCountries: countries
             })
@@ -264,17 +265,18 @@ contract AssetGroupFacetTest is DiamondHelper {
         countries[0] = 76;  // Brazil
         countries[1] = 840; // US
 
-        uint256 parentId = 42;
+        address[] memory modules = new address[](1);
+        modules[0] = address(0xBEEF);
+
         vm.prank(owner);
-        assetManager.registerAsset(
+        uint256 parentId = assetManager.registerAsset(
             IAssetManager.RegisterAssetParams({
-                tokenId: parentId,
                 name: "Premium Building",
                 symbol: "PREM",
                 uri: "ipfs://premium",
                 supplyCap: 0,
                 identityProfileId: 5,
-                complianceModule: address(0xBEEF),
+                complianceModules: modules,
                 issuer: address(0xCAFE),
                 allowedCountries: countries
             })
@@ -301,7 +303,8 @@ contract AssetGroupFacetTest is DiamondHelper {
 
         AssetConfig memory childCfg = assetManager.getAssetConfig(childId);
         assertEq(childCfg.identityProfileId, 5);
-        assertEq(childCfg.complianceModule, address(0xBEEF));
+        assertEq(childCfg.complianceModules.length, 1);
+        assertEq(childCfg.complianceModules[0], address(0xBEEF));
         assertEq(childCfg.issuer, address(0xCAFE));
         assertEq(childCfg.allowedCountries.length, 2);
         assertEq(childCfg.allowedCountries[0], 76);

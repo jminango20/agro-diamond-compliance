@@ -203,9 +203,11 @@ contract ERC1155Facet {
     }
 
     function _compliancePostTransfer(uint256 tokenId, address from, address to, uint256 amount) internal {
-        address module = LibAssetStorage.layout().configs[tokenId].complianceModule;
-        if (module != address(0)) {
-            IComplianceModule(module).transferred(tokenId, from, to, amount);
+        address[] storage modules = LibAssetStorage.layout().configs[tokenId].complianceModules;
+        uint256 len = modules.length;
+        for (uint256 i; i < len;) {
+            IComplianceModule(modules[i]).transferred(tokenId, from, to, amount);
+            unchecked { ++i; }
         }
     }
 
@@ -257,12 +259,14 @@ contract ERC1155Facet {
             revert ERC1155Facet__InsufficientFreeBalance(tokenId, from, available, amount);
         }
 
-        // Step 13: compliance module check
-        address module = config.complianceModule;
-        if (module != address(0)) {
+        // Step 13: compliance modules check (early exit on first rejection)
+        address[] storage modules = config.complianceModules;
+        uint256 mLen = modules.length;
+        for (uint256 j; j < mLen;) {
             bool ok;
-            (ok, reason) = IComplianceModule(module).canTransfer(tokenId, from, to, amount, data);
+            (ok, reason) = IComplianceModule(modules[j]).canTransfer(tokenId, from, to, amount, data);
             if (!ok) revert ERC1155Facet__ComplianceRejected(tokenId, reason);
+            unchecked { ++j; }
         }
     }
 

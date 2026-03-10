@@ -1,11 +1,11 @@
 stateDiagram-v2
     [*] --> Unregistered
 
-    Unregistered --> Registered : registerAsset(tokenId)
+    Unregistered --> Registered : registerAsset() → tokenId
     note right of Registered
         AssetConfig created
         supplyCap, issuer,
-        complianceModule set
+        complianceModules[] set
     end note
 
     Registered --> Active : mint(tokenId, to, amount)

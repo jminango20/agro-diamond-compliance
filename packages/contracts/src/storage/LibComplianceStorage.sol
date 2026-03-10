@@ -4,9 +4,7 @@ pragma solidity 0.8.28;
 // solhint-disable no-inline-assembly
 
 struct ComplianceStorage {
-    /// tokenId → compliance module address
-    mapping(uint256 => address) tokenModule;
-    /// registered module addresses
+    /// registered module addresses (whitelist for governance)
     mapping(address => bool) registeredModules;
 }
 
