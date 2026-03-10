@@ -1,0 +1,36 @@
+type Token {
+  id: String!
+  totalSupply: String!
+  holderCount: Int!
+  holders(first: Int = 50): [Holder!]!
+  events(first: Int = 20): [TransferEvent!]!
+}
+
+type Holder {
+  address: String!
+  balance: String!
+}
+
+type TransferEvent {
+  txHash: String!
+  block: Int!
+  logIndex: Int!
+  from: String!
+  to: String!
+  tokenId: String!
+  amount: String!
+  eventType: String!
+}
+
+type IndexerStatus {
+  lastBlock: Int!
+  tokenCount: Int!
+}
+
+type Query {
+  token(id: String!): Token
+  tokens: [Token!]!
+  holder(tokenId: String!, address: String!): Holder
+  events(first: Int = 50): [TransferEvent!]!
+  status: IndexerStatus!
+}
