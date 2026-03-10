@@ -11,16 +11,20 @@ interface IAccessControl {
 }
 
 interface IAsset {
-    function registerAsset(IAssetManager.RegisterAssetParams calldata p) external;
-    function setComplianceModule(uint256 tokenId, address module) external;
+    function registerAsset(IAssetManager.RegisterAssetParams calldata p) external returns (uint256 tokenId);
+    function addComplianceModule(uint256 tokenId, address module) external;
+    function removeComplianceModule(uint256 tokenId, address module) external;
+    function setComplianceModules(uint256 tokenId, address[] calldata modules) external;
     function setIdentityProfile(uint256 tokenId, uint32 profileId) external;
     function setIssuer(uint256 tokenId, address issuer) external;
     function setSupplyCap(uint256 tokenId, uint256 cap) external;
     function setAllowedCountries(uint256 tokenId, uint16[] calldata countries) external;
     function setAssetUri(uint256 tokenId, string calldata uri) external;
     function getAssetConfig(uint256 tokenId) external view returns (AssetConfig memory);
+    function getComplianceModules(uint256 tokenId) external view returns (address[] memory);
     function getRegisteredTokenIds() external view returns (uint256[] memory);
     function assetExists(uint256 tokenId) external view returns (bool);
+    function nextTokenId() external view returns (uint256);
 }
 
 contract AssetManagerFacetTest is DiamondHelper {
@@ -33,7 +37,7 @@ contract AssetManagerFacetTest is DiamondHelper {
 
     address internal issuer = makeAddr("issuer");
     address internal module = makeAddr("module");
-    uint256 internal constant TOKEN_ID = 1;
+    uint256 internal TOKEN_ID;
 
     IAssetManager.RegisterAssetParams internal baseParams;
 
@@ -43,16 +47,20 @@ contract AssetManagerFacetTest is DiamondHelper {
         ac = IAccessControl(address(d.diamond));
 
         baseParams = IAssetManager.RegisterAssetParams({
-            tokenId: TOKEN_ID,
             name: "Real Estate Fund A",
             symbol: "REFA",
             uri: "ipfs://QmXxx",
             supplyCap: 1_000_000e18,
             identityProfileId: 1,
-            complianceModule: module,
+            complianceModules: _toModules(module),
             issuer: issuer,
             allowedCountries: new uint16[](0)
         });
+    }
+
+    function _toModules(address m) internal pure returns (address[] memory arr) {
+        arr = new address[](1);
+        arr[0] = m;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -60,7 +68,7 @@ contract AssetManagerFacetTest is DiamondHelper {
     //////////////////////////////////////////////////////////////*/
 
     function test_AssetNotExistsByDefault() public view {
-        assertFalse(asset.assetExists(TOKEN_ID));
+        assertFalse(asset.assetExists(1));
     }
 
     function test_RegisteredTokenIdsEmptyByDefault() public view {
@@ -73,7 +81,7 @@ contract AssetManagerFacetTest is DiamondHelper {
 
     function test_OwnerCanRegisterAsset() public {
         vm.prank(owner);
-        asset.registerAsset(baseParams);
+        TOKEN_ID = asset.registerAsset(baseParams);
 
         assertTrue(asset.assetExists(TOKEN_ID));
         AssetConfig memory cfg = asset.getAssetConfig(TOKEN_ID);
@@ -83,7 +91,8 @@ contract AssetManagerFacetTest is DiamondHelper {
         assertEq(cfg.supplyCap, 1_000_000e18);
         assertEq(cfg.totalSupply, 0);
         assertEq(cfg.identityProfileId, 1);
-        assertEq(cfg.complianceModule, module);
+        assertEq(cfg.complianceModules.length, 1);
+        assertEq(cfg.complianceModules[0], module);
         assertEq(cfg.issuer, issuer);
         assertFalse(cfg.paused);
         assertTrue(cfg.exists);
@@ -91,7 +100,7 @@ contract AssetManagerFacetTest is DiamondHelper {
 
     function test_RegisterAsset_AddsToRegisteredList() public {
         vm.prank(owner);
-        asset.registerAsset(baseParams);
+        TOKEN_ID = asset.registerAsset(baseParams);
 
         uint256[] memory ids = asset.getRegisteredTokenIds();
         assertEq(ids.length, 1);
@@ -99,16 +108,10 @@ contract AssetManagerFacetTest is DiamondHelper {
     }
 
     function test_RegisterAsset_EmitsAssetRegistered() public {
+        uint256 expectedTokenId = asset.nextTokenId() + 1;
         vm.prank(owner);
         vm.expectEmit(true, true, false, true, address(d.diamond));
-        emit AssetRegistered(TOKEN_ID, issuer, 1);
-        asset.registerAsset(baseParams);
-    }
-
-    function test_RegisterAsset_EmitsComplianceModuleSet() public {
-        vm.prank(owner);
-        vm.expectEmit(true, true, false, false, address(d.diamond));
-        emit ComplianceModuleSet(TOKEN_ID, module);
+        emit AssetRegistered(expectedTokenId, issuer, 1);
         asset.registerAsset(baseParams);
     }
 
@@ -118,33 +121,23 @@ contract AssetManagerFacetTest is DiamondHelper {
         ac.grantRole(COMPLIANCE_ADMIN, admin);
 
         vm.prank(admin);
-        asset.registerAsset(baseParams);
+        TOKEN_ID = asset.registerAsset(baseParams);
         assertTrue(asset.assetExists(TOKEN_ID));
     }
 
     function test_RegisterMultipleAssets() public {
         IAssetManager.RegisterAssetParams memory p2 = baseParams;
-        p2.tokenId = 2;
         p2.symbol = "REFB";
 
         vm.startPrank(owner);
-        asset.registerAsset(baseParams);
-        asset.registerAsset(p2);
+        uint256 id1 = asset.registerAsset(baseParams);
+        uint256 id2 = asset.registerAsset(p2);
         vm.stopPrank();
 
         assertEq(asset.getRegisteredTokenIds().length, 2);
-        assertTrue(asset.assetExists(1));
-        assertTrue(asset.assetExists(2));
-    }
-
-    function test_RevertWhen_RegisterDuplicateTokenId() public {
-        vm.startPrank(owner);
-        asset.registerAsset(baseParams);
-        vm.expectRevert(
-            abi.encodeWithSignature("AssetManagerFacet__AlreadyRegistered(uint256)", TOKEN_ID)
-        );
-        asset.registerAsset(baseParams);
-        vm.stopPrank();
+        assertTrue(asset.assetExists(id1));
+        assertTrue(asset.assetExists(id2));
+        assertTrue(id1 != id2);
     }
 
     function test_RevertWhen_RegisterWithZeroIssuer() public {
@@ -176,44 +169,51 @@ contract AssetManagerFacetTest is DiamondHelper {
     }
 
     /*//////////////////////////////////////////////////////////////
-                        SET COMPLIANCE MODULE
+                        COMPLIANCE MODULES
     //////////////////////////////////////////////////////////////*/
 
-    function test_OwnerCanSetComplianceModule() public {
+    function test_OwnerCanAddComplianceModule() public {
         address newModule = makeAddr("newModule");
         vm.prank(owner);
-        asset.registerAsset(baseParams);
+        TOKEN_ID = asset.registerAsset(baseParams);
 
         vm.prank(owner);
-        asset.setComplianceModule(TOKEN_ID, newModule);
-        assertEq(asset.getAssetConfig(TOKEN_ID).complianceModule, newModule);
+        asset.addComplianceModule(TOKEN_ID, newModule);
+        address[] memory modules = asset.getComplianceModules(TOKEN_ID);
+        assertEq(modules.length, 2);
+        assertEq(modules[0], module);
+        assertEq(modules[1], newModule);
     }
 
-    function test_SetComplianceModule_EmitsEvent() public {
+    function test_OwnerCanSetComplianceModules() public {
+        vm.prank(owner);
+        TOKEN_ID = asset.registerAsset(baseParams);
+
         address newModule = makeAddr("newModule");
+        address[] memory newModules = new address[](1);
+        newModules[0] = newModule;
         vm.prank(owner);
-        asset.registerAsset(baseParams);
-
-        vm.prank(owner);
-        vm.expectEmit(true, true, false, false, address(d.diamond));
-        emit ComplianceModuleSet(TOKEN_ID, newModule);
-        asset.setComplianceModule(TOKEN_ID, newModule);
+        asset.setComplianceModules(TOKEN_ID, newModules);
+        address[] memory modules = asset.getComplianceModules(TOKEN_ID);
+        assertEq(modules.length, 1);
+        assertEq(modules[0], newModule);
     }
 
-    function test_SetComplianceModuleToZero_RemovesRestrictions() public {
+    function test_SetComplianceModulesEmpty_RemovesRestrictions() public {
         vm.prank(owner);
-        asset.registerAsset(baseParams);
+        TOKEN_ID = asset.registerAsset(baseParams);
         vm.prank(owner);
-        asset.setComplianceModule(TOKEN_ID, address(0));
-        assertEq(asset.getAssetConfig(TOKEN_ID).complianceModule, address(0));
+        address[] memory emptyModules = new address[](0);
+        asset.setComplianceModules(TOKEN_ID, emptyModules);
+        assertEq(asset.getComplianceModules(TOKEN_ID).length, 0);
     }
 
-    function test_RevertWhen_SetModuleOnUnregistered() public {
+    function test_RevertWhen_AddModuleOnUnregistered() public {
         vm.prank(owner);
         vm.expectRevert(
-            abi.encodeWithSignature("AssetManagerFacet__NotRegistered(uint256)", TOKEN_ID)
+            abi.encodeWithSignature("AssetManagerFacet__NotRegistered(uint256)", 999)
         );
-        asset.setComplianceModule(TOKEN_ID, module);
+        asset.addComplianceModule(999, module);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -222,7 +222,7 @@ contract AssetManagerFacetTest is DiamondHelper {
 
     function test_OwnerCanSetIdentityProfile() public {
         vm.prank(owner);
-        asset.registerAsset(baseParams);
+        TOKEN_ID = asset.registerAsset(baseParams);
         vm.prank(owner);
         asset.setIdentityProfile(TOKEN_ID, 99);
         assertEq(asset.getAssetConfig(TOKEN_ID).identityProfileId, 99);
@@ -231,9 +231,9 @@ contract AssetManagerFacetTest is DiamondHelper {
     function test_RevertWhen_SetProfileOnUnregistered() public {
         vm.prank(owner);
         vm.expectRevert(
-            abi.encodeWithSignature("AssetManagerFacet__NotRegistered(uint256)", TOKEN_ID)
+            abi.encodeWithSignature("AssetManagerFacet__NotRegistered(uint256)", 999)
         );
-        asset.setIdentityProfile(TOKEN_ID, 1);
+        asset.setIdentityProfile(999, 1);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -243,7 +243,7 @@ contract AssetManagerFacetTest is DiamondHelper {
     function test_OwnerCanSetIssuer() public {
         address newIssuer = makeAddr("newIssuer");
         vm.prank(owner);
-        asset.registerAsset(baseParams);
+        TOKEN_ID = asset.registerAsset(baseParams);
         vm.prank(owner);
         asset.setIssuer(TOKEN_ID, newIssuer);
         assertEq(asset.getAssetConfig(TOKEN_ID).issuer, newIssuer);
@@ -254,7 +254,7 @@ contract AssetManagerFacetTest is DiamondHelper {
         vm.prank(owner);
         ac.grantRole(COMPLIANCE_ADMIN, admin);
         vm.prank(owner);
-        asset.registerAsset(baseParams);
+        TOKEN_ID = asset.registerAsset(baseParams);
 
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSignature("LibDiamond__OnlyOwner()"));
@@ -267,7 +267,7 @@ contract AssetManagerFacetTest is DiamondHelper {
 
     function test_OwnerCanSetSupplyCap() public {
         vm.prank(owner);
-        asset.registerAsset(baseParams);
+        TOKEN_ID = asset.registerAsset(baseParams);
         vm.prank(owner);
         asset.setSupplyCap(TOKEN_ID, 500e18);
         assertEq(asset.getAssetConfig(TOKEN_ID).supplyCap, 500e18);
@@ -275,7 +275,7 @@ contract AssetManagerFacetTest is DiamondHelper {
 
     function test_SetSupplyCapToZero_IsUnlimited() public {
         vm.prank(owner);
-        asset.registerAsset(baseParams);
+        TOKEN_ID = asset.registerAsset(baseParams);
         vm.prank(owner);
         asset.setSupplyCap(TOKEN_ID, 0);
         assertEq(asset.getAssetConfig(TOKEN_ID).supplyCap, 0);
@@ -291,7 +291,7 @@ contract AssetManagerFacetTest is DiamondHelper {
         countries[1] = 840; // United States
 
         vm.prank(owner);
-        asset.registerAsset(baseParams);
+        TOKEN_ID = asset.registerAsset(baseParams);
         vm.prank(owner);
         asset.setAllowedCountries(TOKEN_ID, countries);
 
@@ -304,7 +304,7 @@ contract AssetManagerFacetTest is DiamondHelper {
     function test_SetAllowedCountriesEmpty_AllowsAll() public {
         uint16[] memory countries = new uint16[](0);
         vm.prank(owner);
-        asset.registerAsset(baseParams);
+        TOKEN_ID = asset.registerAsset(baseParams);
         vm.prank(owner);
         asset.setAllowedCountries(TOKEN_ID, countries);
         assertEq(asset.getAssetConfig(TOKEN_ID).allowedCountries.length, 0);
@@ -316,7 +316,7 @@ contract AssetManagerFacetTest is DiamondHelper {
 
     function test_OwnerCanSetUri() public {
         vm.prank(owner);
-        asset.registerAsset(baseParams);
+        TOKEN_ID = asset.registerAsset(baseParams);
         vm.prank(owner);
         asset.setAssetUri(TOKEN_ID, "ipfs://QmNewHash");
         assertEq(asset.getAssetConfig(TOKEN_ID).uri, "ipfs://QmNewHash");
@@ -326,23 +326,21 @@ contract AssetManagerFacetTest is DiamondHelper {
                                 FUZZ
     //////////////////////////////////////////////////////////////*/
 
-    function testFuzz_RegisterAndQueryAsset(uint256 tokenId, uint256 supplyCap) public {
-        vm.assume(tokenId != 0);
-
+    function testFuzz_RegisterAndQueryAsset(uint256 supplyCap) public {
+        address[] memory emptyModules = new address[](0);
         IAssetManager.RegisterAssetParams memory p = IAssetManager.RegisterAssetParams({
-            tokenId: tokenId,
             name: "Fuzz Asset",
             symbol: "FUZZ",
             uri: "",
             supplyCap: supplyCap,
             identityProfileId: 0,
-            complianceModule: address(0),
+            complianceModules: emptyModules,
             issuer: issuer,
             allowedCountries: new uint16[](0)
         });
 
         vm.prank(owner);
-        asset.registerAsset(p);
+        uint256 tokenId = asset.registerAsset(p);
 
         assertTrue(asset.assetExists(tokenId));
         assertEq(asset.getAssetConfig(tokenId).supplyCap, supplyCap);
@@ -355,5 +353,4 @@ contract AssetManagerFacetTest is DiamondHelper {
 
     event AssetRegistered(uint256 indexed tokenId, address indexed issuer, uint32 profileId);
     event AssetConfigUpdated(uint256 indexed tokenId);
-    event ComplianceModuleSet(uint256 indexed tokenId, address indexed module);
 }

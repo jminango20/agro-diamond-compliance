@@ -207,17 +207,21 @@ contract DiamondHelper is Test {
     }
 
     function _assetManagerSelectors() internal pure returns (bytes4[] memory sels) {
-        sels = new bytes4[](10);
+        sels = new bytes4[](14);
         sels[0] = AssetManagerFacet.registerAsset.selector;
-        sels[1] = AssetManagerFacet.setComplianceModule.selector;
-        sels[2] = AssetManagerFacet.setIdentityProfile.selector;
-        sels[3] = AssetManagerFacet.setIssuer.selector;
-        sels[4] = AssetManagerFacet.setSupplyCap.selector;
-        sels[5] = AssetManagerFacet.setAllowedCountries.selector;
-        sels[6] = AssetManagerFacet.setAssetUri.selector;
-        sels[7] = AssetManagerFacet.getAssetConfig.selector;
-        sels[8] = AssetManagerFacet.getRegisteredTokenIds.selector;
-        sels[9] = AssetManagerFacet.assetExists.selector;
+        sels[1] = AssetManagerFacet.addComplianceModule.selector;
+        sels[2] = AssetManagerFacet.removeComplianceModule.selector;
+        sels[3] = AssetManagerFacet.setComplianceModules.selector;
+        sels[4] = AssetManagerFacet.setIdentityProfile.selector;
+        sels[5] = AssetManagerFacet.setIssuer.selector;
+        sels[6] = AssetManagerFacet.setSupplyCap.selector;
+        sels[7] = AssetManagerFacet.setAllowedCountries.selector;
+        sels[8] = AssetManagerFacet.setAssetUri.selector;
+        sels[9] = AssetManagerFacet.getAssetConfig.selector;
+        sels[10] = AssetManagerFacet.getComplianceModules.selector;
+        sels[11] = AssetManagerFacet.getRegisteredTokenIds.selector;
+        sels[12] = AssetManagerFacet.assetExists.selector;
+        sels[13] = AssetManagerFacet.nextTokenId.selector;
     }
 
     function _claimTopicsSelectors() internal pure returns (bytes4[] memory sels) {
@@ -250,12 +254,11 @@ contract DiamondHelper is Test {
     }
 
     function _complianceRouterSelectors() internal pure returns (bytes4[] memory sels) {
-        sels = new bytes4[](5);
+        sels = new bytes4[](4);
         sels[0] = ComplianceRouterFacet.canTransfer.selector;
         sels[1] = ComplianceRouterFacet.transferred.selector;
         sels[2] = ComplianceRouterFacet.minted.selector;
         sels[3] = ComplianceRouterFacet.burned.selector;
-        sels[4] = ComplianceRouterFacet.getComplianceModule.selector;
     }
 
     function _erc1155Selectors() internal pure returns (bytes4[] memory sels) {

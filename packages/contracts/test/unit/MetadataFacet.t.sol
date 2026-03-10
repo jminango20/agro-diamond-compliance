@@ -21,8 +21,10 @@ contract MetadataFacetTest is DiamondHelper {
     AccessControlFacet internal ac;
     PauseFacet internal pause;
 
-    uint256 internal constant TOKEN_1 = 1;
-    uint256 internal constant TOKEN_2 = 2;
+    uint256 internal TOKEN_1;
+    uint256 internal TOKEN_2;
+
+    address[] internal emptyModules;
 
     function setUp() public {
         d = deployDiamond(owner);
@@ -37,28 +39,26 @@ contract MetadataFacetTest is DiamondHelper {
         countries[1] = 840; // US
 
         vm.startPrank(owner);
-        am.registerAsset(
+        TOKEN_1 = am.registerAsset(
             IAssetManager.RegisterAssetParams({
-                tokenId: TOKEN_1,
                 name: "Fundo Imobiliario XYZ",
                 symbol: "FXYZ",
                 uri: "https://api.example.com/metadata/1",
                 supplyCap: 1_000_000,
                 identityProfileId: 0,
-                complianceModule: address(0),
+                complianceModules: emptyModules,
                 issuer: owner,
                 allowedCountries: countries
             })
         );
-        am.registerAsset(
+        TOKEN_2 = am.registerAsset(
             IAssetManager.RegisterAssetParams({
-                tokenId: TOKEN_2,
                 name: "Debenture ABC",
                 symbol: "DABC",
                 uri: "",
                 supplyCap: 0,
                 identityProfileId: 0,
-                complianceModule: address(0),
+                complianceModules: emptyModules,
                 issuer: owner,
                 allowedCountries: new uint16[](0)
             })

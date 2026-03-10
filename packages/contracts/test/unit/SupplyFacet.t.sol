@@ -30,11 +30,13 @@ contract SupplyFacetTest is DiamondHelper {
     AccessControlFacet internal ac;
     MockComplianceModule internal mockModule;
 
-    uint256 internal constant TOKEN_1 = 1;
-    uint256 internal constant TOKEN_2 = 2;
+    uint256 internal TOKEN_1;
+    uint256 internal TOKEN_2;
 
     bytes32 internal constant ISSUER_ROLE = keccak256("ISSUER_ROLE");
     bytes32 internal constant TRANSFER_AGENT = keccak256("TRANSFER_AGENT");
+
+    address[] internal emptyModules;
 
     function setUp() public {
         d = deployDiamond(owner);
@@ -48,28 +50,26 @@ contract SupplyFacetTest is DiamondHelper {
 
         uint16[] memory countries = new uint16[](0);
         vm.startPrank(owner);
-        am.registerAsset(
+        TOKEN_1 = am.registerAsset(
             IAssetManager.RegisterAssetParams({
-                tokenId: TOKEN_1,
                 name: "Bond A",
                 symbol: "BNDA",
                 uri: "",
                 supplyCap: 10_000,
                 identityProfileId: 0,
-                complianceModule: address(0),
+                complianceModules: emptyModules,
                 issuer: owner,
                 allowedCountries: countries
             })
         );
-        am.registerAsset(
+        TOKEN_2 = am.registerAsset(
             IAssetManager.RegisterAssetParams({
-                tokenId: TOKEN_2,
                 name: "Bond B",
                 symbol: "BNDB",
                 uri: "",
                 supplyCap: 0,
                 identityProfileId: 0,
-                complianceModule: address(0),
+                complianceModules: emptyModules,
                 issuer: owner,
                 allowedCountries: countries
             })
@@ -415,7 +415,7 @@ contract SupplyFacetTest is DiamondHelper {
 
     function test_Mint_CallsComplianceMintedHook() public {
         vm.prank(owner);
-        am.setComplianceModule(TOKEN_1, address(mockModule));
+        am.addComplianceModule(TOKEN_1, address(mockModule));
 
         vm.prank(owner);
         supply.mint(TOKEN_1, alice, 100);
@@ -425,7 +425,7 @@ contract SupplyFacetTest is DiamondHelper {
 
     function test_Burn_CallsComplianceBurnedHook() public {
         vm.prank(owner);
-        am.setComplianceModule(TOKEN_1, address(mockModule));
+        am.addComplianceModule(TOKEN_1, address(mockModule));
 
         vm.startPrank(owner);
         supply.mint(TOKEN_1, alice, 500);
@@ -437,7 +437,7 @@ contract SupplyFacetTest is DiamondHelper {
 
     function test_ForcedTransfer_CallsComplianceTransferredHook() public {
         vm.prank(owner);
-        am.setComplianceModule(TOKEN_1, address(mockModule));
+        am.addComplianceModule(TOKEN_1, address(mockModule));
 
         vm.prank(owner);
         supply.mint(TOKEN_1, alice, 500);

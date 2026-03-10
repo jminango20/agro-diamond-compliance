@@ -36,12 +36,12 @@ sequenceDiagram
     Note over ERC: disponível = 1000 - 200 = 800 >= amount ✓
 
     Note over ERC: Etapa 4 — Verificação de Compliance
-    ERC->>Asset: configs[tokenId].complianceModule
-    Asset-->>ERC: 0xModuleAddr
+    ERC->>Asset: configs[tokenId].complianceModules[]
+    Asset-->>ERC: [0xModuleA, 0xModuleB]
     ERC->>Router: canTransfer(tokenId, from, to, amount)
-    Router->>Module: canTransfer(tokenId, from, to, amount, "")
-    Module-->>Router: (true, 0x0)
-    Router-->>ERC: true ✓
+    Router->>Module: moduleA.canTransfer() → (true, 0x0)
+    Router->>Module: moduleB.canTransfer() → (true, 0x0)
+    Router-->>ERC: true ✓ (todos os módulos aprovaram)
 
     Note over ERC: Etapa 5 — Execução
     ERC->>Balance: from.free -= amount
@@ -51,4 +51,5 @@ sequenceDiagram
 
     Note over ERC: Etapa 6 — Pós-Hook
     ERC->>Router: transferred(tokenId, from, to, amount)
-    Router->>Module: transferred(tokenId, from, to, amount)
+    Router->>Module: moduleA.transferred(tokenId, from, to, amount)
+    Router->>Module: moduleB.transferred(tokenId, from, to, amount)

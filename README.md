@@ -283,7 +283,7 @@ The CI pipeline runs 7 parallel jobs on every PR:
 | Role | Capabilities |
 |------|-------------|
 | **Owner** | `diamondCut`, `transferOwnership`, `emergencyPause`, `setRoleAdmin` |
-| **COMPLIANCE_ADMIN** | `registerAsset`, `createGroup`, `setComplianceModule`, `setIdentityProfile`, `registerIdentity` |
+| **COMPLIANCE_ADMIN** | `registerAsset`, `createGroup`, `setComplianceModules`, `addComplianceModule`, `removeComplianceModule`, `setIdentityProfile`, `registerIdentity` |
 | **ISSUER_ROLE** | `mint`, `burn`, `mintUnit`, `mintUnitBatch`, `createDividend` |
 | **TRANSFER_AGENT** | `forcedTransfer`, `recoverWallet` |
 | **Token Holder** | `safeTransferFrom` (if compliance passes), `claimDividend`, `setApprovalForAll` |

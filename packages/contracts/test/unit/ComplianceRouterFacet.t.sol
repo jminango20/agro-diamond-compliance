@@ -19,7 +19,9 @@ contract ComplianceRouterFacetTest is DiamondHelper {
     AssetManagerFacet internal am;
     MockComplianceModule internal mockModule;
 
-    uint256 internal constant TOKEN_ID = 1;
+    uint256 internal TOKEN_ID;
+
+    address[] internal emptyModules;
 
     function setUp() public {
         d = deployDiamond(owner);
@@ -30,15 +32,14 @@ contract ComplianceRouterFacetTest is DiamondHelper {
         // Register asset with no compliance module
         uint16[] memory countries = new uint16[](0);
         vm.prank(owner);
-        am.registerAsset(
+        TOKEN_ID = am.registerAsset(
             IAssetManager.RegisterAssetParams({
-                tokenId: TOKEN_ID,
                 name: "Test",
                 symbol: "TST",
                 uri: "https://test.com",
                 supplyCap: 0,
                 identityProfileId: 0,
-                complianceModule: address(0),
+                complianceModules: emptyModules,
                 issuer: owner,
                 allowedCountries: countries
             })
@@ -135,16 +136,18 @@ contract ComplianceRouterFacetTest is DiamondHelper {
     }
 
     /*//////////////////////////////////////////////////////////////
-                        GET COMPLIANCE MODULE
+                        GET COMPLIANCE MODULES
     //////////////////////////////////////////////////////////////*/
 
-    function test_GetComplianceModule_ReturnsZero_WhenNotSet() public view {
-        assertEq(router.getComplianceModule(TOKEN_ID), address(0));
+    function test_GetComplianceModules_ReturnsEmpty_WhenNotSet() public view {
+        assertEq(router.getComplianceModules(TOKEN_ID).length, 0);
     }
 
-    function test_GetComplianceModule_ReturnsModule() public {
+    function test_GetComplianceModules_ReturnsModule() public {
         _setModule(address(mockModule));
-        assertEq(router.getComplianceModule(TOKEN_ID), address(mockModule));
+        address[] memory modules = router.getComplianceModules(TOKEN_ID);
+        assertEq(modules.length, 1);
+        assertEq(modules[0], address(mockModule));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -157,7 +160,12 @@ contract ComplianceRouterFacetTest is DiamondHelper {
 
         (bool ok, bytes32 reason) = router.canTransfer(TOKEN_ID, alice, bob, 100, "");
         assertEq(ok, ok_);
-        assertEq(reason, reason_);
+        if (ok_) {
+            // Router normalises to REASON_OK when all modules approve
+            assertEq(reason, LibReasonCodes.REASON_OK);
+        } else {
+            assertEq(reason, reason_);
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -166,6 +174,6 @@ contract ComplianceRouterFacetTest is DiamondHelper {
 
     function _setModule(address module) internal {
         vm.prank(owner);
-        am.setComplianceModule(TOKEN_ID, module);
+        am.addComplianceModule(TOKEN_ID, module);
     }
 }

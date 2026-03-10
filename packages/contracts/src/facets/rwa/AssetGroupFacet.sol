@@ -199,7 +199,7 @@ contract AssetGroupFacet {
         childCfg.supplyCap = params.supplyCap;
         childCfg.totalSupply = 0;
         childCfg.identityProfileId = parentCfg.identityProfileId;
-        childCfg.complianceModule = parentCfg.complianceModule;
+        childCfg.complianceModules = parentCfg.complianceModules;
         childCfg.issuer = parentCfg.issuer;
         childCfg.paused = false;
         childCfg.exists = true;
@@ -242,10 +242,12 @@ contract AssetGroupFacet {
             ss.holderCount[tokenId] += 1;
         }
 
-        // Compliance post-hook
-        address module = config.complianceModule;
-        if (module != address(0)) {
-            IComplianceModule(module).minted(tokenId, to, amount);
+        // Compliance post-hooks
+        address[] storage modules = config.complianceModules;
+        uint256 mLen = modules.length;
+        for (uint256 i; i < mLen;) {
+            IComplianceModule(modules[i]).minted(tokenId, to, amount);
+            unchecked { ++i; }
         }
     }
 

@@ -23,7 +23,7 @@ contract MaxBalanceModuleTest is DiamondHelper {
     AssetManagerFacet internal am;
     AccessControlFacet internal ac;
 
-    uint256 internal constant TOKEN_1 = 1;
+    uint256 internal TOKEN_1;
 
     function setUp() public {
         d = deployDiamond(owner);
@@ -34,17 +34,19 @@ contract MaxBalanceModuleTest is DiamondHelper {
 
         module = new MaxBalanceModule(address(d.diamond), owner);
 
+        address[] memory modules = new address[](1);
+        modules[0] = address(module);
+
         uint16[] memory countries = new uint16[](0);
         vm.startPrank(owner);
-        am.registerAsset(
+        TOKEN_1 = am.registerAsset(
             IAssetManager.RegisterAssetParams({
-                tokenId: TOKEN_1,
                 name: "Bond A",
                 symbol: "BNDA",
                 uri: "",
                 supplyCap: 0,
                 identityProfileId: 0,
-                complianceModule: address(module),
+                complianceModules: modules,
                 issuer: owner,
                 allowedCountries: countries
             })

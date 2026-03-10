@@ -25,7 +25,7 @@ contract CountryRestrictModuleTest is DiamondHelper {
     IdentityRegistryFacet internal ir;
     AccessControlFacet internal ac;
 
-    uint256 internal constant TOKEN_1 = 1;
+    uint256 internal TOKEN_1;
     uint16 internal constant US = 840;
     uint16 internal constant BR = 76;
     uint16 internal constant CN = 156;
@@ -40,17 +40,19 @@ contract CountryRestrictModuleTest is DiamondHelper {
 
         module = new CountryRestrictModule(address(d.diamond), owner);
 
+        address[] memory modules = new address[](1);
+        modules[0] = address(module);
+
         uint16[] memory countries = new uint16[](0);
         vm.startPrank(owner);
-        am.registerAsset(
+        TOKEN_1 = am.registerAsset(
             IAssetManager.RegisterAssetParams({
-                tokenId: TOKEN_1,
                 name: "Bond A",
                 symbol: "BNDA",
                 uri: "",
                 supplyCap: 0,
                 identityProfileId: 0,
-                complianceModule: address(module),
+                complianceModules: modules,
                 issuer: owner,
                 allowedCountries: countries
             })

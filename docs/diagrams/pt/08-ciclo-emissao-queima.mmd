@@ -1,11 +1,11 @@
 stateDiagram-v2
     [*] --> NaoRegistrado
 
-    NaoRegistrado --> Registrado : registerAsset(tokenId)
+    NaoRegistrado --> Registrado : registerAsset() → tokenId
     note right of Registrado
         AssetConfig criado
         supplyCap, issuer,
-        complianceModule definidos
+        complianceModules[] definidos
     end note
 
     Registrado --> Ativo : mint(tokenId, to, amount)

@@ -13,7 +13,7 @@ flowchart LR
         direction TB
         MU["ISSUER / COMPLIANCE_ADMIN / Owner"]
         MU --> CHILD_ID["Generate childTokenId<br/><i>(groupId << 128) | unitIndex</i>"]
-        CHILD_ID --> INHERIT["Inherit from parent:<br/>identityProfile<br/>complianceModule<br/>issuer<br/>allowedCountries"]
+        CHILD_ID --> INHERIT["Inherit from parent:<br/>identityProfile<br/>complianceModules[]<br/>issuer<br/>allowedCountries"]
         INHERIT --> REG_CHILD["Register child asset<br/><i>in AssetStorage</i>"]
         REG_CHILD --> MINT["Mint fractions<br/>to investor"]
         MINT --> TRACK["Update holder tracking<br/>+ group state"]

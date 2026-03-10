@@ -21,10 +21,10 @@ flowchart TD
     B1 -->|no| REVERT7["REVERT<br/>InsufficientFreeBalance"]
     B1 -->|yes| C1
 
-    C1{"complianceModule<br/>set for tokenId?"}
+    C1{"complianceModules[]<br/>set for tokenId?"}
     C1 -->|no| EXEC
-    C1 -->|yes| C2{"module.canTransfer()<br/>returns true?"}
-    C2 -->|no| REVERT8["REVERT<br/>ComplianceCheckFailed"]
+    C1 -->|yes| C2{"all modules.canTransfer()<br/>return true?"}
+    C2 -->|no| REVERT8["REVERT<br/>ComplianceCheckFailed<br/><i>early exit on first rejection</i>"]
     C2 -->|yes| EXEC
 
     EXEC["Execute Transfer"]
@@ -35,8 +35,8 @@ flowchart TD
 
     E1 & E2 & E3 & E4 --> POST
 
-    POST{"complianceModule<br/>exists?"}
-    POST -->|yes| HOOK["module.transferred(tokenId, from, to, amount)"]
+    POST{"complianceModules[]<br/>exist?"}
+    POST -->|yes| HOOK["for each module:<br/>module.transferred(tokenId, from, to, amount)"]
     POST -->|no| DONE
     HOOK --> DONE(["Transfer Complete"])
 

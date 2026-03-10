@@ -27,10 +27,12 @@ contract ERC1155FacetTest is DiamondHelper {
     AccessControlFacet internal ac;
     MockComplianceModule internal mockModule;
 
-    uint256 internal constant TOKEN_1 = 1;
-    uint256 internal constant TOKEN_2 = 2;
+    uint256 internal TOKEN_1;
+    uint256 internal TOKEN_2;
 
     bytes32 internal constant TRANSFER_AGENT = keccak256("TRANSFER_AGENT");
+
+    address[] internal emptyModules;
 
     function setUp() public {
         d = deployDiamond(owner);
@@ -44,28 +46,26 @@ contract ERC1155FacetTest is DiamondHelper {
         // Register two assets
         uint16[] memory countries = new uint16[](0);
         vm.startPrank(owner);
-        am.registerAsset(
+        TOKEN_1 = am.registerAsset(
             IAssetManager.RegisterAssetParams({
-                tokenId: TOKEN_1,
                 name: "Bond A",
                 symbol: "BNDA",
                 uri: "",
                 supplyCap: 0,
                 identityProfileId: 0,
-                complianceModule: address(0),
+                complianceModules: emptyModules,
                 issuer: owner,
                 allowedCountries: countries
             })
         );
-        am.registerAsset(
+        TOKEN_2 = am.registerAsset(
             IAssetManager.RegisterAssetParams({
-                tokenId: TOKEN_2,
                 name: "Bond B",
                 symbol: "BNDB",
                 uri: "",
                 supplyCap: 0,
                 identityProfileId: 0,
-                complianceModule: address(0),
+                complianceModules: emptyModules,
                 issuer: owner,
                 allowedCountries: countries
             })
@@ -327,7 +327,7 @@ contract ERC1155FacetTest is DiamondHelper {
 
     function test_ComplianceModule_Allows() public {
         vm.prank(owner);
-        am.setComplianceModule(TOKEN_1, address(mockModule));
+        am.addComplianceModule(TOKEN_1, address(mockModule));
 
         vm.prank(alice);
         token.safeTransferFrom(alice, bob, TOKEN_1, 100, "");
@@ -337,7 +337,7 @@ contract ERC1155FacetTest is DiamondHelper {
 
     function test_RevertWhen_ComplianceModule_Rejects() public {
         vm.prank(owner);
-        am.setComplianceModule(TOKEN_1, address(mockModule));
+        am.addComplianceModule(TOKEN_1, address(mockModule));
         mockModule.setResult(false, LibReasonCodes.REASON_COUNTRY_RESTRICTED);
 
         vm.prank(alice);

@@ -8,8 +8,16 @@ solc = "0.8.28"
 optimizer = true
 optimizer_runs = 200
 via_ir = true
+
 fuzz = { runs = 256 }
 invariant = { runs = 256 }
+
+[profile.default.optimizer_details]
+yul = true
+
+[profile.default.optimizer_details.yulDetails]
+stackAllocation = true
+optimizerSteps = "u"
 
 [profile.ci]
 fuzz = { runs = 10000 }

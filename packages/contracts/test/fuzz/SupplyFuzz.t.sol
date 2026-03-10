@@ -20,11 +20,13 @@ contract SupplyFuzz is DiamondHelper {
     SupplyFacet internal supply;
     ERC1155Facet internal token;
 
-    uint256 internal constant TOKEN_1 = 1;
+    uint256 internal TOKEN_1;
     uint256 internal constant SUPPLY_CAP = 1_000_000;
 
     bytes32 internal constant ISSUER_ROLE = keccak256("ISSUER_ROLE");
     bytes32 internal constant TRANSFER_AGENT = keccak256("TRANSFER_AGENT");
+
+    address[] internal emptyModules;
 
     function setUp() public {
         d = deployDiamond(owner);
@@ -33,15 +35,14 @@ contract SupplyFuzz is DiamondHelper {
 
         uint16[] memory countries = new uint16[](0);
         vm.startPrank(owner);
-        AssetManagerFacet(address(d.diamond)).registerAsset(
+        TOKEN_1 = AssetManagerFacet(address(d.diamond)).registerAsset(
             IAssetManager.RegisterAssetParams({
-                tokenId: TOKEN_1,
                 name: "Bond A",
                 symbol: "BNDA",
                 uri: "",
                 supplyCap: SUPPLY_CAP,
                 identityProfileId: 0,
-                complianceModule: address(0),
+                complianceModules: emptyModules,
                 issuer: owner,
                 allowedCountries: countries
             })

@@ -122,19 +122,20 @@ struct AssetConfig {
     string  name;
     string  symbol;
     string  uri;
-    uint256 supplyCap;           // 0 = unlimited
+    uint256 supplyCap;            // 0 = unlimited
     uint256 totalSupply;
-    uint32  identityProfileId;   // → LibIdentityStorage.profiles[id]
-    address complianceModule;    // → IComplianceModule
-    address issuer;              // who can mint
+    uint32  identityProfileId;    // → LibIdentityStorage.profiles[id]
+    address[] complianceModules;  // → IComplianceModule[] (max 10)
+    address issuer;               // who can mint
     bool    paused;
     bool    exists;
-    uint16[] allowedCountries;   // ISO 3166-1 numeric
+    uint16[] allowedCountries;    // ISO 3166-1 numeric
 }
 
 struct AssetStorage {
     mapping(uint256 => AssetConfig) configs;   // tokenId → config
     uint256[] registeredTokenIds;
+    uint256 nextTokenId;                       // auto-increment
 }
 ```
 
@@ -213,8 +214,8 @@ _validateMovement(operator, from, to, [tokenId], [amount], data, TRANSFER)
             ├─ 10. lockupExpiry[tokenId][from] < block.timestamp
             ├─ 11. partitions[tokenId][from].free - frozenAmount >= amount
             ├─ 12. allowedCountries[tokenId].contains(walletCountry[to])
-            ├─ 13. complianceModule[tokenId].canTransfer(tokenId, from, to, amount)
-            │        └─ returns (bool ok, bytes32 reasonCode)
+            ├─ 13. for each complianceModules[tokenId]: canTransfer(tokenId, from, to, amount)
+            │        └─ returns (bool ok, bytes32 reasonCode) — early exit on first rejection
             │
             ▼
         _executeTransfer()

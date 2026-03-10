@@ -11,19 +11,20 @@ struct AssetConfig {
     string name;
     string symbol;
     string uri;
-    uint256 supplyCap;         // 0 = unlimited
-    uint256 totalSupply;       // current minted supply for this tokenId
-    uint32 identityProfileId;  // → LibIdentityStorage.profiles[id]
-    address complianceModule;  // → IComplianceModule
-    address issuer;            // authorised minter for this asset
+    uint256 supplyCap;          // 0 = unlimited
+    uint256 totalSupply;        // current minted supply for this tokenId
+    uint32 identityProfileId;   // → LibIdentityStorage.profiles[id]
+    address[] complianceModules; // → IComplianceModule[] (max 10)
+    address issuer;             // authorised minter for this asset
     bool paused;
     bool exists;
-    uint16[] allowedCountries; // ISO 3166-1 numeric; empty = all allowed
+    uint16[] allowedCountries;  // ISO 3166-1 numeric; empty = all allowed
 }
 
 struct AssetStorage {
     mapping(uint256 => AssetConfig) configs;
     uint256[] registeredTokenIds;
+    uint256 nextTokenId; // auto-increment, starts at 1
 }
 
 /// @title LibAssetStorage
