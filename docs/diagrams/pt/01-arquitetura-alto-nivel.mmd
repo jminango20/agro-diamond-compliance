@@ -1,0 +1,104 @@
+graph TB
+    subgraph External["Contratos Externos"]
+        ONCHAINID["ONCHAINID<br/><i>Chaves ERC-734 + Claims ERC-735</i>"]
+        MaxBal["MaxBalanceModule"]
+        MaxHold["MaxHoldersModule"]
+    end
+
+    User(("Investidor<br/>Carteira")) -->|"todas as chamadas"| Diamond
+
+    subgraph Diamond["Diamond Proxy — Endereço Único"]
+        direction TB
+        FB["fallback() → delegatecall<br/><i>seletor → busca de facet</i>"]
+    end
+
+    Diamond -->|delegatecall| Core
+    Diamond -->|delegatecall| Security
+    Diamond -->|delegatecall| Token
+    Diamond -->|delegatecall| Identity
+    Diamond -->|delegatecall| Compliance
+    Diamond -->|delegatecall| RWA
+
+    subgraph Core["Core"]
+        DiamondCut["DiamondCutFacet<br/><i>atualizar facets</i>"]
+        DiamondLoupe["DiamondLoupeFacet<br/><i>introspecção + ERC-165</i>"]
+        Ownership["OwnershipFacet<br/><i>Ownable2Step</i>"]
+    end
+
+    subgraph Security["Segurança"]
+        ACL["AccessControlFacet<br/><i>RBAC: conceder/revogar roles</i>"]
+        Pause["PauseFacet<br/><i>pausa global + por ativo</i>"]
+        Emergency["EmergencyFacet<br/><i>circuit breaker</i>"]
+    end
+
+    subgraph Token["Token (ERC-1155)"]
+        AssetMgr["AssetManagerFacet<br/><i>registrar classes de ativos</i>"]
+        ERC1155["ERC1155Facet<br/><i>transferências + saldos</i>"]
+        Supply["SupplyFacet<br/><i>emissão / queima / transferência forçada</i>"]
+        Metadata["MetadataFacet<br/><i>nome, símbolo, URI por tokenId</i>"]
+    end
+
+    subgraph Identity["Identidade (KYC/AML)"]
+        IdReg["IdentityRegistryFacet<br/><i>carteira → ONCHAINID + país</i>"]
+        Claims["ClaimTopicsFacet<br/><i>tópicos de KYC obrigatórios</i>"]
+        Issuers["TrustedIssuerFacet<br/><i>emissores de claims autorizados</i>"]
+    end
+
+    subgraph Compliance["Compliance"]
+        Router["ComplianceRouterFacet<br/><i>canTransfer() por tokenId</i>"]
+    end
+
+    subgraph RWA["Operações RWA"]
+        Freeze["FreezeFacet<br/><i>congelar / lockup</i>"]
+        Recovery["RecoveryFacet<br/><i>recuperação de carteira</i>"]
+        Snapshot["SnapshotFacet<br/><i>saldos ponto-no-tempo</i>"]
+        Dividend["DividendFacet<br/><i>distribuição pro-rata</i>"]
+        AssetGroup["AssetGroupFacet<br/><i>ativos hierárquicos + lazy mint</i>"]
+    end
+
+    IdReg -.->|"verificar"| ONCHAINID
+    Router -.->|"delegar"| MaxBal
+    Router -.->|"delegar"| MaxHold
+
+    subgraph Storage["Storage Compartilhado (11 slots isolados)"]
+        S1["LibAppStorage"]
+        S2["LibAssetStorage"]
+        S3["LibERC1155Storage"]
+        S4["LibSupplyStorage"]
+        S5["LibFreezeStorage"]
+        S6["LibAccessStorage"]
+        S7["LibIdentityStorage"]
+        S8["LibComplianceStorage"]
+        S9["LibSnapshotStorage"]
+        S10["LibDividendStorage"]
+        S11["LibAssetGroupStorage"]
+    end
+
+    Core -.-> Storage
+    Security -.-> Storage
+    Token -.-> Storage
+    Identity -.-> Storage
+    Compliance -.-> Storage
+    RWA -.-> Storage
+
+    classDef proxy fill:#4f46e5,stroke:#818cf8,color:#fff,stroke-width:2px
+    classDef core fill:#0891b2,stroke:#06b6d4,color:#fff
+    classDef security fill:#d97706,stroke:#f59e0b,color:#fff
+    classDef token fill:#059669,stroke:#10b981,color:#fff
+    classDef identity fill:#7c3aed,stroke:#8b5cf6,color:#fff
+    classDef compliance fill:#dc2626,stroke:#ef4444,color:#fff
+    classDef rwa fill:#4338ca,stroke:#6366f1,color:#fff
+    classDef storage fill:#1e293b,stroke:#475569,color:#94a3b8
+    classDef external fill:#334155,stroke:#64748b,color:#cbd5e1
+    classDef user fill:#0f172a,stroke:#818cf8,color:#e2e8f0
+
+    class Diamond proxy
+    class DiamondCut,DiamondLoupe,Ownership core
+    class ACL,Pause,Emergency security
+    class AssetMgr,ERC1155,Supply,Metadata token
+    class IdReg,Claims,Issuers identity
+    class Router compliance
+    class Freeze,Recovery,Snapshot,Dividend,AssetGroup rwa
+    class S1,S2,S3,S4,S5,S6,S7,S8,S9,S10,S11 storage
+    class ONCHAINID,MaxBal,MaxHold external
+    class User user

@@ -1,0 +1,54 @@
+sequenceDiagram
+    participant User as Investidor
+    participant ERC as ERC1155Facet
+    participant Freeze as FreezeStorage
+    participant Asset as AssetStorage
+    participant Balance as ERC1155Storage
+    participant Router as ComplianceRouterFacet
+    participant Module as IComplianceModule
+    participant Supply as SupplyStorage
+
+    User->>ERC: safeTransferFrom(from, to, tokenId, amount)
+
+    Note over ERC: Etapa 1 — Verificações Globais
+    ERC->>Freeze: globalPaused?
+    Freeze-->>ERC: false
+    ERC->>Freeze: globalFreeze[from]?
+    Freeze-->>ERC: false
+    ERC->>Freeze: globalFreeze[to]?
+    Freeze-->>ERC: false
+
+    Note over ERC: Etapa 2 — Verificações do Ativo
+    ERC->>Asset: configs[tokenId].exists?
+    Asset-->>ERC: true
+    ERC->>Asset: configs[tokenId].paused?
+    Asset-->>ERC: false
+    ERC->>Freeze: assetFreeze[tokenId][from]?
+    Freeze-->>ERC: false
+    ERC->>Freeze: lockupExpiry[tokenId][from] <= agora?
+    Freeze-->>ERC: true
+
+    Note over ERC: Etapa 3 — Verificação de Saldo
+    ERC->>Balance: partitions[tokenId][from].free
+    Balance-->>ERC: 1000
+    ERC->>Freeze: frozenAmount[tokenId][from]
+    Freeze-->>ERC: 200
+    Note over ERC: disponível = 1000 - 200 = 800 >= amount ✓
+
+    Note over ERC: Etapa 4 — Verificação de Compliance
+    ERC->>Asset: configs[tokenId].complianceModule
+    Asset-->>ERC: 0xModuleAddr
+    ERC->>Router: canTransfer(tokenId, from, to, amount)
+    Router->>Module: canTransfer(tokenId, from, to, amount, "")
+    Module-->>Router: (true, 0x0)
+    Router-->>ERC: true ✓
+
+    Note over ERC: Etapa 5 — Execução
+    ERC->>Balance: from.free -= amount
+    ERC->>Balance: to.free += amount
+    ERC->>Supply: atualizar rastreamento de holders
+    ERC-->>User: emitir TransferSingle
+
+    Note over ERC: Etapa 6 — Pós-Hook
+    ERC->>Router: transferred(tokenId, from, to, amount)
+    Router->>Module: transferred(tokenId, from, to, amount)

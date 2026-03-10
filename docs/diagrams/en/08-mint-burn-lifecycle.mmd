@@ -1,0 +1,50 @@
+stateDiagram-v2
+    [*] --> Unregistered
+
+    Unregistered --> Registered : registerAsset(tokenId)
+    note right of Registered
+        AssetConfig created
+        supplyCap, issuer,
+        complianceModule set
+    end note
+
+    Registered --> Active : mint(tokenId, to, amount)
+    note right of Active
+        tokens in circulation
+        holders tracked
+        transfers allowed
+    end note
+
+    Active --> Active : transfer / mint / burn
+
+    state Active {
+        [*] --> Free
+        Free --> Frozen : setAssetWalletFrozen()
+        Frozen --> Free : setAssetWalletFrozen(false)
+        Free --> PartiallyFrozen : setFrozenAmount()
+        PartiallyFrozen --> Free : setFrozenAmount(0)
+        Free --> LockedUp : setLockupExpiry()
+        LockedUp --> Free : expiry reached
+    }
+
+    Active --> Paused : pauseAsset(tokenId)
+    Paused --> Active : unpauseAsset(tokenId)
+
+    Active --> ZeroSupply : burn all tokens
+    ZeroSupply --> Active : mint again
+
+    state "Recovery" as R
+    Active --> R : recoverWallet(old, new)
+    R --> Active : balances migrated to new wallet
+
+    state "Forced Transfer" as FT
+    Active --> FT : forcedTransfer()
+    FT --> Active : regulatory override complete
+
+    state "Snapshot" as SS
+    Active --> SS : createSnapshot()
+    SS --> Active : point-in-time captured
+
+    state "Dividend" as DV
+    SS --> DV : createDividend(snapshotId)
+    DV --> Active : holders claim via claimDividend()

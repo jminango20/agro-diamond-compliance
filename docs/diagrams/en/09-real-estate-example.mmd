@@ -1,0 +1,45 @@
+graph TD
+    subgraph Registration["1. Asset Registration"]
+        REG["registerAsset()<br/><b>tokenId: 1</b><br/>name: Edificio Aurora<br/>symbol: AURORA<br/>supplyCap: 0<br/>issuer: 0xOwner<br/>complianceModule: MaxBalance"]
+    end
+
+    subgraph GroupCreation["2. Group Creation"]
+        GRP["createGroup()<br/><b>groupId: 1</b><br/>parentTokenId: 1<br/>name: Aurora Apartments<br/>maxUnits: 100"]
+    end
+
+    subgraph LazyMint["3. Lazy Minting (on sale)"]
+        direction LR
+        APT1["mintUnit()<br/><b>Apt 101</b><br/>tokenId: (1<<128)|1<br/>investor: Alice<br/>fractions: 500"]
+        APT2["mintUnit()<br/><b>Apt 102</b><br/>tokenId: (1<<128)|2<br/>investor: Bob<br/>fractions: 300"]
+        APT3["mintUnit()<br/><b>Apt 103</b><br/>tokenId: (1<<128)|3<br/>investor: Carol<br/>fractions: 1000"]
+    end
+
+    subgraph SecondaryMarket["4. Secondary Market"]
+        T1["Alice transfers 100 fractions<br/>of Apt 101 to Dave"]
+        T2["Compliance check:<br/>MaxBalance module validates"]
+        T3["Identity check:<br/>Dave is KYC verified"]
+    end
+
+    subgraph Dividend["5. Rent Distribution"]
+        S1["createSnapshot()<br/>capture all holder balances"]
+        D1["createDividend()<br/>10 ETH total for Apt 101<br/>linked to snapshot"]
+        CL1["Alice claims: 8/10 ETH<br/>(400/500 fractions)"]
+        CL2["Dave claims: 2/10 ETH<br/>(100/500 fractions)"]
+    end
+
+    Registration -->|"parent asset exists"| GroupCreation
+    GroupCreation -->|"group ready"| LazyMint
+    LazyMint -->|"tokens in circulation"| SecondaryMarket
+    SecondaryMarket -->|"month-end"| Dividend
+
+    classDef reg fill:#1e1b4b,stroke:#6366f1,color:#c7d2fe
+    classDef group fill:#312e81,stroke:#818cf8,color:#e0e7ff
+    classDef mint fill:#064e3b,stroke:#10b981,color:#a7f3d0
+    classDef market fill:#78350f,stroke:#f59e0b,color:#fef3c7
+    classDef dividend fill:#134e4a,stroke:#06b6d4,color:#a5f3fc
+
+    class REG reg
+    class GRP group
+    class APT1,APT2,APT3 mint
+    class T1,T2,T3 market
+    class S1,D1,CL1,CL2 dividend
