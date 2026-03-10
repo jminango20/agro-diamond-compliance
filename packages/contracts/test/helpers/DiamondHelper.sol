@@ -13,6 +13,7 @@ import {FreezeFacet} from "../../src/facets/rwa/FreezeFacet.sol";
 import {RecoveryFacet} from "../../src/facets/rwa/RecoveryFacet.sol";
 import {SnapshotFacet} from "../../src/facets/rwa/SnapshotFacet.sol";
 import {DividendFacet} from "../../src/facets/rwa/DividendFacet.sol";
+import {AssetGroupFacet} from "../../src/facets/rwa/AssetGroupFacet.sol";
 import {AssetManagerFacet} from "../../src/facets/token/AssetManagerFacet.sol";
 import {ClaimTopicsFacet} from "../../src/facets/identity/ClaimTopicsFacet.sol";
 import {TrustedIssuerFacet} from "../../src/facets/identity/TrustedIssuerFacet.sol";
@@ -43,6 +44,7 @@ contract DiamondHelper is Test {
         MetadataFacet metadataFacet;
         SnapshotFacet snapshotFacet;
         DividendFacet dividendFacet;
+        AssetGroupFacet assetGroupFacet;
     }
 
     struct ComplianceFacets {
@@ -67,7 +69,7 @@ contract DiamondHelper is Test {
 
         d.diamond = new Diamond(owner, address(d.core.cutFacet));
 
-        IDiamond.FacetCut[] memory cuts = new IDiamond.FacetCut[](17);
+        IDiamond.FacetCut[] memory cuts = new IDiamond.FacetCut[](18);
         _fillCoreCuts(cuts, d.core);
         _fillTokenCuts(cuts, d.token);
         _fillComplianceCuts(cuts, d.compliance);
@@ -96,6 +98,7 @@ contract DiamondHelper is Test {
         t.metadataFacet = new MetadataFacet();
         t.snapshotFacet = new SnapshotFacet();
         t.dividendFacet = new DividendFacet();
+        t.assetGroupFacet = new AssetGroupFacet();
     }
 
     function _deployComplianceFacets() internal returns (ComplianceFacets memory c) {
@@ -122,6 +125,7 @@ contract DiamondHelper is Test {
         cuts[13] = _cut(address(t.metadataFacet), _metadataSelectors());
         cuts[15] = _cut(address(t.snapshotFacet), _snapshotSelectors());
         cuts[16] = _cut(address(t.dividendFacet), _dividendSelectors());
+        cuts[17] = _cut(address(t.assetGroupFacet), _assetGroupSelectors());
     }
 
     function _fillComplianceCuts(IDiamond.FacetCut[] memory cuts, ComplianceFacets memory c) internal pure {
@@ -312,5 +316,17 @@ contract DiamondHelper is Test {
         sels[3] = DividendFacet.hasClaimed.selector;
         sels[4] = DividendFacet.claimableAmount.selector;
         sels[5] = DividendFacet.getTokenDividends.selector;
+    }
+
+    function _assetGroupSelectors() internal pure returns (bytes4[] memory sels) {
+        sels = new bytes4[](8);
+        sels[0] = AssetGroupFacet.createGroup.selector;
+        sels[1] = AssetGroupFacet.mintUnit.selector;
+        sels[2] = AssetGroupFacet.mintUnitBatch.selector;
+        sels[3] = AssetGroupFacet.getGroup.selector;
+        sels[4] = AssetGroupFacet.getGroupChildren.selector;
+        sels[5] = AssetGroupFacet.getChildGroup.selector;
+        sels[6] = AssetGroupFacet.getRegisteredGroupIds.selector;
+        sels[7] = AssetGroupFacet.groupExists.selector;
     }
 }

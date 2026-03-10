@@ -15,6 +15,7 @@ import {FreezeFacet} from "../src/facets/rwa/FreezeFacet.sol";
 import {RecoveryFacet} from "../src/facets/rwa/RecoveryFacet.sol";
 import {SnapshotFacet} from "../src/facets/rwa/SnapshotFacet.sol";
 import {DividendFacet} from "../src/facets/rwa/DividendFacet.sol";
+import {AssetGroupFacet} from "../src/facets/rwa/AssetGroupFacet.sol";
 import {AssetManagerFacet} from "../src/facets/token/AssetManagerFacet.sol";
 import {ClaimTopicsFacet} from "../src/facets/identity/ClaimTopicsFacet.sol";
 import {TrustedIssuerFacet} from "../src/facets/identity/TrustedIssuerFacet.sol";
@@ -67,6 +68,7 @@ contract Deploy is Script {
         MetadataFacet metadataFacet = new MetadataFacet();
         SnapshotFacet snapshotFacet = new SnapshotFacet();
         DividendFacet dividendFacet = new DividendFacet();
+        AssetGroupFacet assetGroupFacet = new AssetGroupFacet();
         DiamondInit diamondInit = new DiamondInit();
 
         // ── 2. Deploy Diamond ───────────────────────────────────────
@@ -75,7 +77,7 @@ contract Deploy is Script {
 
         // ── 3. Build facet cuts ─────────────────────────────────────
 
-        IDiamond.FacetCut[] memory cuts = new IDiamond.FacetCut[](17);
+        IDiamond.FacetCut[] memory cuts = new IDiamond.FacetCut[](18);
 
         cuts[0] = _cut(address(loupeFacet), _loupeSelectors());
         cuts[1] = _cut(address(ownershipFacet), _ownershipSelectors());
@@ -94,6 +96,7 @@ contract Deploy is Script {
         cuts[14] = _cut(address(metadataFacet), _metadataSelectors());
         cuts[15] = _cut(address(snapshotFacet), _snapshotSelectors());
         cuts[16] = _cut(address(dividendFacet), _dividendSelectors());
+        cuts[17] = _cut(address(assetGroupFacet), _assetGroupSelectors());
 
         // ── 4. Execute diamond cut + init ───────────────────────────
 
@@ -126,6 +129,7 @@ contract Deploy is Script {
         console2.log("RecoveryFacet        :", address(recoveryFacet));
         console2.log("SnapshotFacet        :", address(snapshotFacet));
         console2.log("DividendFacet        :", address(dividendFacet));
+        console2.log("AssetGroupFacet      :", address(assetGroupFacet));
         console2.log("");
         console2.log("--- Token ---");
         console2.log("AssetManagerFacet    :", address(assetManagerFacet));
@@ -336,13 +340,25 @@ contract Deploy is Script {
         sels[5] = DividendFacet.getTokenDividends.selector;
     }
 
+    function _assetGroupSelectors() internal pure returns (bytes4[] memory sels) {
+        sels = new bytes4[](8);
+        sels[0] = AssetGroupFacet.createGroup.selector;
+        sels[1] = AssetGroupFacet.mintUnit.selector;
+        sels[2] = AssetGroupFacet.mintUnitBatch.selector;
+        sels[3] = AssetGroupFacet.getGroup.selector;
+        sels[4] = AssetGroupFacet.getGroupChildren.selector;
+        sels[5] = AssetGroupFacet.getChildGroup.selector;
+        sels[6] = AssetGroupFacet.getRegisteredGroupIds.selector;
+        sels[7] = AssetGroupFacet.groupExists.selector;
+    }
+
     /*//////////////////////////////////////////////////////////////
                         POST-DEPLOY VERIFICATION
     //////////////////////////////////////////////////////////////*/
 
     function _verify(Diamond diamond, address expectedOwner) internal view {
         address[] memory facetAddrs = IDiamondLoupe(address(diamond)).facetAddresses();
-        require(facetAddrs.length == 18, "Deploy: expected 18 facets");
+        require(facetAddrs.length == 19, "Deploy: expected 19 facets");
 
         require(
             OwnershipFacet(address(diamond)).owner() == expectedOwner,

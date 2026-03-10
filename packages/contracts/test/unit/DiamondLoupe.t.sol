@@ -23,7 +23,7 @@ contract DiamondLoupeTest is DiamondHelper {
 
     function test_FacetAddressesLength() public view {
         address[] memory addrs = loupe.facetAddresses();
-        assertEq(addrs.length, 18);
+        assertEq(addrs.length, 19);
     }
 
     function test_FacetAddressesContainsCutFacet() public view {
@@ -96,7 +96,7 @@ contract DiamondLoupeTest is DiamondHelper {
 
     function test_FacetsReturnsCorrectLength() public view {
         IDiamondLoupe.Facet[] memory fs = loupe.facets();
-        assertEq(fs.length, 18);
+        assertEq(fs.length, 19);
     }
 
     function test_FacetsSelectorsNonEmpty() public view {
