@@ -48,6 +48,9 @@ contract AssetManagerFacet {
     event ComplianceModuleAdded(uint256 indexed tokenId, address indexed module);
     event ComplianceModuleRemoved(uint256 indexed tokenId, address indexed module);
 
+    /// @dev ERC-1155 standard metadata event — emitted on URI change so indexers detect metadata updates.
+    event URI(string value, uint256 indexed id);
+
     /*//////////////////////////////////////////////////////////////
                         STATE-CHANGING FUNCTIONS
     //////////////////////////////////////////////////////////////*/
@@ -189,6 +192,7 @@ contract AssetManagerFacet {
         _enforceComplianceAdminOrOwner();
         _requireRegistered(tokenId);
         LibAssetStorage.layout().configs[tokenId].uri = uri;
+        emit URI(uri, tokenId);
         emit AssetConfigUpdated(tokenId);
     }
 

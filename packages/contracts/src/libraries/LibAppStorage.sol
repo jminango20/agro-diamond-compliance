@@ -10,6 +10,8 @@ struct AppStorage {
     address pendingOwner;
     bool globalPaused;
     uint16 protocolVersion;
+    string contractName;
+    string contractSymbol;
 }
 
 /// @title LibAppStorage

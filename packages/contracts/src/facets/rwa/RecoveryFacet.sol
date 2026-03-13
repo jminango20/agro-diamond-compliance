@@ -37,6 +37,11 @@ contract RecoveryFacet {
         uint256 pendingSettlement
     );
 
+    /// @dev ERC-1155 standard event — emitted on recovery so explorers/indexers track balance movements.
+    event TransferSingle(
+        address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value
+    );
+
     /*//////////////////////////////////////////////////////////////
                                 ERRORS
     //////////////////////////////////////////////////////////////*/
@@ -179,6 +184,8 @@ contract RecoveryFacet {
                 }
             }
 
+            uint256 totalMoved = free + locked + custody + pending;
+            emit TransferSingle(msg.sender, lostWallet, newWallet, tokenId, totalMoved);
             emit TokensRecovered(tokenId, lostWallet, newWallet, free, locked, custody, pending);
         }
     }

@@ -28,6 +28,12 @@ contract SupplyFacet {
                                 EVENTS
     //////////////////////////////////////////////////////////////*/
 
+    /// @dev ERC-1155 standard event — emitted on mint, burn, and forcedTransfer
+    ///      so that explorers and indexers recognise token movements.
+    event TransferSingle(
+        address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value
+    );
+
     event Minted(uint256 indexed tokenId, address indexed to, uint256 amount);
     event Burned(uint256 indexed tokenId, address indexed from, uint256 amount);
     event ForcedTransfer(
@@ -125,6 +131,7 @@ contract SupplyFacet {
 
         _updateHolderTracking(tokenId, from, to);
 
+        emit TransferSingle(msg.sender, from, to, tokenId, amount);
         emit ForcedTransfer(tokenId, from, to, amount, reasonCode);
 
         // Post-hook: all compliance modules get notified even for forced transfers
@@ -222,6 +229,7 @@ contract SupplyFacet {
             ss.holderCount[tokenId] += 1;
         }
 
+        emit TransferSingle(msg.sender, address(0), to, tokenId, amount);
         emit Minted(tokenId, to, amount);
 
         // Compliance post-hooks
@@ -250,6 +258,7 @@ contract SupplyFacet {
             ss.holderCount[tokenId] -= 1;
         }
 
+        emit TransferSingle(msg.sender, from, address(0), tokenId, amount);
         emit Burned(tokenId, from, amount);
 
         // Compliance post-hooks

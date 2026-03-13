@@ -62,6 +62,11 @@ contract AssetGroupFacet {
         uint256 indexed groupId, uint256 indexed childTokenId, address indexed investor, string name, uint256 amount
     );
 
+    /// @dev ERC-1155 standard event — emitted on mint so explorers/indexers track token movements.
+    event TransferSingle(
+        address indexed operator, address indexed from, address indexed to, uint256 id, uint256 value
+    );
+
     /*//////////////////////////////////////////////////////////////
                             ROLE CONSTANTS
     //////////////////////////////////////////////////////////////*/
@@ -241,6 +246,8 @@ contract AssetGroupFacet {
             ss.isHolder[tokenId][to] = true;
             ss.holderCount[tokenId] += 1;
         }
+
+        emit TransferSingle(msg.sender, address(0), to, tokenId, amount);
 
         // Compliance post-hooks
         address[] storage modules = config.complianceModules;

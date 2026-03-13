@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 import {LibAssetStorage, AssetStorage, AssetConfig} from "../../storage/LibAssetStorage.sol";
 import {LibSupplyStorage, SupplyStorage} from "../../storage/LibSupplyStorage.sol";
+import {LibAppStorage, AppStorage} from "../../libraries/LibAppStorage.sol";
 
 /**
  * @title MetadataFacet
@@ -24,6 +25,16 @@ contract MetadataFacet {
     /*//////////////////////////////////////////////////////////////
                             EXTERNAL VIEWS
     //////////////////////////////////////////////////////////////*/
+
+    /// @notice Returns the contract-level name (used by explorers like Polygonscan)
+    function name() external view returns (string memory) {
+        return LibAppStorage.layout().contractName;
+    }
+
+    /// @notice Returns the contract-level symbol (used by explorers like Polygonscan)
+    function symbol() external view returns (string memory) {
+        return LibAppStorage.layout().contractSymbol;
+    }
 
     /// @notice Returns the metadata URI for a tokenId (ERC-1155 standard)
     /// @param id The token type ID
