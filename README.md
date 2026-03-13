@@ -6,26 +6,7 @@ A single Diamond contract manages multiple regulated asset classes — each `tok
 
 ## Architecture
 
-```
-                     ┌──────────────────────────────┐
-                     │     Diamond Proxy (EIP-2535)  │
-                     │     single contract address   │
-                     └──────────────┬───────────────┘
-                                    │ delegatecall
-          ┌─────────────────────────┼─────────────────────────┐
-          │            │            │            │             │
-     ┌────┴────┐ ┌─────┴─────┐ ┌───┴────┐ ┌────┴────┐ ┌──────┴──────┐
-     │  Core   │ │  Security │ │ Token  │ │Identity │ │     RWA     │
-     │  (3)    │ │    (3)    │ │  (4)   │ │  (3)    │ │     (6)     │
-     └─────────┘ └───────────┘ └────────┘ └─────────┘ └─────────────┘
-          │            │            │            │             │
-          └─────────────────────────┴─────────────────────────┘
-                                    │
-                     ┌──────────────┴───────────────┐
-                     │   11 Isolated Storage Slots   │
-                     │  keccak256("diamond.rwa.X") - 1│
-                     └──────────────────────────────┘
-```
+![Diamond Architecture](docs/diamond.png)
 
 ### Standards
 
@@ -177,14 +158,17 @@ diamond-erc3643/
 │   │   │   └── initializers/         # DiamondInit
 │   │   ├── test/
 │   │   │   ├── unit/                 # 26 test files (1:1 with facets + modules)
-│   │   │   ├── fuzz/                 # Property-based tests
+│   │   │   ├── fuzz/                 # Property-based fuzz tests
 │   │   │   ├── invariant/            # FREI-PI pattern invariant tests
+│   │   │   ├── echidna/              # Echidna property-based fuzzing
 │   │   │   └── helpers/              # DiamondHelper, MockComplianceModule
 │   │   ├── script/                   # Deploy.s.sol, ConfigureAsset.s.sol
 │   │   ├── foundry.toml
 │   │   ├── remappings.txt
 │   │   └── Makefile
-│   └── indexer/                      # Go blockchain event indexer
+│   ├── indexer/                      # Go blockchain event indexer
+│   ├── app/                          # React 19 + Wagmi + RainbowKit frontend
+│   └── tools/                        # Developer utilities
 ├── docs/
 │   ├── architecture.md               # Detailed architecture specification
 │   └── diagrams/                     # Mermaid diagrams (EN + PT)
@@ -203,27 +187,31 @@ diamond-erc3643/
 
 | Contract | Address | Verified |
 |----------|---------|----------|
-| **Diamond (Proxy)** | [`0xc9f624Bc1B3e9514b9d7C112408cf05AdC886377`](https://amoy.polygonscan.com/address/0xc9f624Bc1B3e9514b9d7C112408cf05AdC886377) | ✅ |
-| DiamondCutFacet | [`0x8E1688C6876d7f21333eedFFEdde9E0e86084484`](https://amoy.polygonscan.com/address/0x8E1688C6876d7f21333eedFFEdde9E0e86084484) | ✅ |
-| DiamondLoupeFacet | [`0x4A208213Ae4251601e585E04F4257DC1f670FCB2`](https://amoy.polygonscan.com/address/0x4A208213Ae4251601e585E04F4257DC1f670FCB2) | ✅ |
-| OwnershipFacet | [`0xDB79eb2be53a34f1A05c43Cb170fe38F68bAED95`](https://amoy.polygonscan.com/address/0xDB79eb2be53a34f1A05c43Cb170fe38F68bAED95) | ✅ |
-| AccessControlFacet | [`0xB4701fc30F6bb5F89F20747d590f9A07AAccD0ad`](https://amoy.polygonscan.com/address/0xB4701fc30F6bb5F89F20747d590f9A07AAccD0ad) | ✅ |
-| PauseFacet | [`0x4022769bb2dC8923e82ecAcB1F535d93449eA22f`](https://amoy.polygonscan.com/address/0x4022769bb2dC8923e82ecAcB1F535d93449eA22f) | ✅ |
-| EmergencyFacet | [`0x42E8Cc7997A5AE3114Ed49377810231cF1463f85`](https://amoy.polygonscan.com/address/0x42E8Cc7997A5AE3114Ed49377810231cF1463f85) | ✅ |
-| FreezeFacet | [`0xF8Fc8e20dCB762F3883FDE8dc939eaAE106BE1Bd`](https://amoy.polygonscan.com/address/0xF8Fc8e20dCB762F3883FDE8dc939eaAE106BE1Bd) | ✅ |
-| RecoveryFacet | [`0x1f2C63bE9c1254a0360b6e1f9f5e74a09302D751`](https://amoy.polygonscan.com/address/0x1f2C63bE9c1254a0360b6e1f9f5e74a09302D751) | ✅ |
-| AssetManagerFacet | [`0x3D83f55026cD1D1F4600f80746CD562C3d2E972a`](https://amoy.polygonscan.com/address/0x3D83f55026cD1D1F4600f80746CD562C3d2E972a) | ✅ |
-| ClaimTopicsFacet | [`0x430702765a96093FA7CDDae5CCB003B663b1873B`](https://amoy.polygonscan.com/address/0x430702765a96093FA7CDDae5CCB003B663b1873B) | ✅ |
-| TrustedIssuerFacet | [`0x4Bf670b0C273f9D2484C58c563D99608941BA061`](https://amoy.polygonscan.com/address/0x4Bf670b0C273f9D2484C58c563D99608941BA061) | ✅ |
-| IdentityRegistryFacet | [`0x6311Bc588d9459E7609FaF51788334e4b79D465b`](https://amoy.polygonscan.com/address/0x6311Bc588d9459E7609FaF51788334e4b79D465b) | ✅ |
-| ComplianceRouterFacet | [`0x7831b77892dc5Bd64787A827EcAb33E3F741378A`](https://amoy.polygonscan.com/address/0x7831b77892dc5Bd64787A827EcAb33E3F741378A) | ✅ |
-| ERC1155Facet | [`0x0593d2B0D30F44659fa74F2ffb14C5B76d14892d`](https://amoy.polygonscan.com/address/0x0593d2B0D30F44659fa74F2ffb14C5B76d14892d) | ✅ |
-| SupplyFacet | [`0x30F5C5fF44307558bef9980ad27a526C7c571d85`](https://amoy.polygonscan.com/address/0x30F5C5fF44307558bef9980ad27a526C7c571d85) | ✅ |
-| MetadataFacet | [`0xA96C679beaffAdf01284b8C3B69adC950F2A9A71`](https://amoy.polygonscan.com/address/0xA96C679beaffAdf01284b8C3B69adC950F2A9A71) | ✅ |
-| SnapshotFacet | [`0xa039bEcAb71986d0aFA56F4622d13Bc3109750DF`](https://amoy.polygonscan.com/address/0xa039bEcAb71986d0aFA56F4622d13Bc3109750DF) | ✅ |
-| DividendFacet | [`0xB34c24D79A135c4360aCe4Ad3B5A0f03d92D5AB3`](https://amoy.polygonscan.com/address/0xB34c24D79A135c4360aCe4Ad3B5A0f03d92D5AB3) | ✅ |
-| AssetGroupFacet | [`0xEF6271FEee158E40Cf21D70f12FF71b82BaFefe6`](https://amoy.polygonscan.com/address/0xEF6271FEee158E40Cf21D70f12FF71b82BaFefe6) | ✅ |
-| DiamondInit | [`0x148792860cdF971c768BaC0769a919611B85c394`](https://amoy.polygonscan.com/address/0x148792860cdF971c768BaC0769a919611B85c394) | ✅ |
+| **Diamond (Proxy)** | [`0xAb07CEf1BEeDBb30F5795418c79879794b31C521`](https://amoy.polygonscan.com/address/0xAb07CEf1BEeDBb30F5795418c79879794b31C521) | ✅ |
+| DiamondCutFacet | [`0x499b99F9516be8a363c7923e57d8dab2E63fC0D9`](https://amoy.polygonscan.com/address/0x499b99F9516be8a363c7923e57d8dab2E63fC0D9) | ✅ |
+| DiamondLoupeFacet | [`0x92Da52B23380A68f4565cD3f5aECAb31FC56eff1`](https://amoy.polygonscan.com/address/0x92Da52B23380A68f4565cD3f5aECAb31FC56eff1) | ✅ |
+| OwnershipFacet | [`0x97CBfcF2662c81fa93EcdC1A6e82045980061427`](https://amoy.polygonscan.com/address/0x97CBfcF2662c81fa93EcdC1A6e82045980061427) | ✅ |
+| AccessControlFacet | [`0xD097fe5983a52e9e28a504375285e8Ca124C880B`](https://amoy.polygonscan.com/address/0xD097fe5983a52e9e28a504375285e8Ca124C880B) | ✅ |
+| PauseFacet | [`0xEF310f4bD869e9711c45022B3A8Da074A003FF0C`](https://amoy.polygonscan.com/address/0xEF310f4bD869e9711c45022B3A8Da074A003FF0C) | ✅ |
+| EmergencyFacet | [`0x67561FF38AF20f93E3e835B5F02D4545E30266C6`](https://amoy.polygonscan.com/address/0x67561FF38AF20f93E3e835B5F02D4545E30266C6) | ✅ |
+| FreezeFacet | [`0xdfd98C7b28CCcaE14b48612c4239B36E78094F49`](https://amoy.polygonscan.com/address/0xdfd98C7b28CCcaE14b48612c4239B36E78094F49) | ✅ |
+| RecoveryFacet | [`0xA1CBD518D0b4C7850099b2AA1a26889739c32B5a`](https://amoy.polygonscan.com/address/0xA1CBD518D0b4C7850099b2AA1a26889739c32B5a) | ✅ |
+| AssetManagerFacet | [`0x9BDaEDa3A0Aaec41cF08f00fD55a5c178ea3d7f1`](https://amoy.polygonscan.com/address/0x9BDaEDa3A0Aaec41cF08f00fD55a5c178ea3d7f1) | ✅ |
+| ClaimTopicsFacet | [`0xcE23BcDc538430aF96745968dBc874C1daB8C824`](https://amoy.polygonscan.com/address/0xcE23BcDc538430aF96745968dBc874C1daB8C824) | ✅ |
+| TrustedIssuerFacet | [`0x578550bA4fAe186Cd7614862De3Ec8092F7Db5Db`](https://amoy.polygonscan.com/address/0x578550bA4fAe186Cd7614862De3Ec8092F7Db5Db) | ✅ |
+| IdentityRegistryFacet | [`0x514f8C0c8b9C5Dd3BF78AAB95c162a32eA653522`](https://amoy.polygonscan.com/address/0x514f8C0c8b9C5Dd3BF78AAB95c162a32eA653522) | ✅ |
+| ComplianceRouterFacet | [`0x09BCf4BafA1a4943024E6A8b9ffc55AC539EEb13`](https://amoy.polygonscan.com/address/0x09BCf4BafA1a4943024E6A8b9ffc55AC539EEb13) | ✅ |
+| ERC1155Facet | [`0x2EF1aD8C024114874e10aF26b9212A27eb03FA70`](https://amoy.polygonscan.com/address/0x2EF1aD8C024114874e10aF26b9212A27eb03FA70) | ✅ |
+| SupplyFacet | [`0xFCF4532842a6AddA939A9283E6D68a97232C8eC2`](https://amoy.polygonscan.com/address/0xFCF4532842a6AddA939A9283E6D68a97232C8eC2) | ✅ |
+| MetadataFacet | [`0x7BeaC0bEA5687191c41Bb39E5C8c708a13f49Ad7`](https://amoy.polygonscan.com/address/0x7BeaC0bEA5687191c41Bb39E5C8c708a13f49Ad7) | ✅ |
+| SnapshotFacet | [`0xd11381ea9b24b90b16671F04727B2D39793d4C76`](https://amoy.polygonscan.com/address/0xd11381ea9b24b90b16671F04727B2D39793d4C76) | ✅ |
+| DividendFacet | [`0xD08d0D88CA607Bacc3945532158Ec8b52E397190`](https://amoy.polygonscan.com/address/0xD08d0D88CA607Bacc3945532158Ec8b52E397190) | ✅ |
+| AssetGroupFacet | [`0xBF5753C300796f7D78227E0BD1f4A2FbAD3e9C9c`](https://amoy.polygonscan.com/address/0xBF5753C300796f7D78227E0BD1f4A2FbAD3e9C9c) | ✅ |
+| DiamondInit | [`0x663217FCFC5807636b1201b413921Ab01b1C6Be0`](https://amoy.polygonscan.com/address/0x663217FCFC5807636b1201b413921Ab01b1C6Be0) | ✅ |
+| DiamondABI (EIP-1967) | [`0x5Cc6aF3a9DeF71326de4c0DfE9Da9bb7E1B0bd55`](https://amoy.polygonscan.com/address/0x5Cc6aF3a9DeF71326de4c0DfE9Da9bb7E1B0bd55) | ✅ |
+| CountryRestrictModule | [`0x0c15e06c36b07E44aEe6D49a75554bc7bfFa50D2`](https://amoy.polygonscan.com/address/0x0c15e06c36b07E44aEe6D49a75554bc7bfFa50D2) | ✅ |
+| MaxBalanceModule | [`0x4B3cCd1F7BB1aF5F41b73e7fE3010023FcD89B44`](https://amoy.polygonscan.com/address/0x4B3cCd1F7BB1aF5F41b73e7fE3010023FcD89B44) | ✅ |
+| MaxHoldersModule | [`0xC40Bf7bb339DD4485b1F5c3c0C5FE78DACD9999a`](https://amoy.polygonscan.com/address/0xC40Bf7bb339DD4485b1F5c3c0C5FE78DACD9999a) | ✅ |
 
 > **Owner:** `0xB40061C7bf8394eb130Fcb5EA06868064593BFAa`
 >
@@ -259,15 +247,16 @@ make build           # forge build --sizes
 make test            # all tests
 make test-unit       # unit tests only
 make test-fuzz       # fuzz tests (10,000 runs)
-make test-invariant  # invariant tests (10,000 runs, depth 500)
+make test-invariant  # invariant tests (10,000 runs)
 make test-contract CONTRACT=ERC1155Facet   # single contract
 ```
 
-### Coverage & Analysis
+### Security Testing
 
 ```bash
-make coverage        # forge coverage → lcov.info
 make slither         # static analysis
+make echidna         # property-based fuzzing (50,000 calls)
+make coverage        # forge coverage → lcov.info
 make lint            # solhint
 ```
 
@@ -308,6 +297,7 @@ The CI pipeline runs 7 parallel jobs on every PR:
 | **Fuzz** | 10,000 fuzz runs on `test/fuzz/**` |
 | **Invariant** | 10,000 invariant runs on `test/invariant/**` |
 | **Slither** | Static analysis with Slither |
+| **Echidna** | Property-based fuzzing (50,000 calls) |
 | **Coverage** | `forge coverage` → Codecov |
 
 ## Roles & Permissions
@@ -347,7 +337,7 @@ The CI pipeline runs 7 parallel jobs on every PR:
 | Proxy Pattern | EIP-2535 Diamond (Nick Mudge reference) |
 | Token Standard | ERC-1155 with ERC-3643 compliance hooks |
 | Identity | ONCHAINID (ERC-734 keys + ERC-735 claims) |
-| Testing | Forge (unit + fuzz + invariant), Slither |
+| Testing | Forge (unit + fuzz + invariant), Echidna, Slither |
 | Indexer | Go + RocksDB + GraphQL |
 | CI/CD | GitHub Actions, Codecov, Changesets |
 | Monorepo | pnpm workspaces + Turborepo |
