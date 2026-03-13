@@ -1,0 +1,172 @@
+[
+  {
+    "type": "function",
+    "name": "addTrustedIssuer",
+    "inputs": [
+      {
+        "name": "profileId",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "issuer",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "isTrustedIssuer",
+    "inputs": [
+      {
+        "name": "profileId",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "issuer",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "removeTrustedIssuer",
+    "inputs": [
+      {
+        "name": "profileId",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "issuer",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "event",
+    "name": "TrustedIssuerAdded",
+    "inputs": [
+      {
+        "name": "profileId",
+        "type": "uint32",
+        "indexed": true,
+        "internalType": "uint32"
+      },
+      {
+        "name": "issuer",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "TrustedIssuerRemoved",
+    "inputs": [
+      {
+        "name": "profileId",
+        "type": "uint32",
+        "indexed": true,
+        "internalType": "uint32"
+      },
+      {
+        "name": "issuer",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "VerificationCacheInvalidated",
+    "inputs": [
+      {
+        "name": "wallet",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "profileId",
+        "type": "uint32",
+        "indexed": true,
+        "internalType": "uint32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "TrustedIssuerFacet__AlreadyTrusted",
+    "inputs": [
+      {
+        "name": "profileId",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "issuer",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "TrustedIssuerFacet__NotTrusted",
+    "inputs": [
+      {
+        "name": "profileId",
+        "type": "uint32",
+        "internalType": "uint32"
+      },
+      {
+        "name": "issuer",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "TrustedIssuerFacet__ProfileNotFound",
+    "inputs": [
+      {
+        "name": "profileId",
+        "type": "uint32",
+        "internalType": "uint32"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "TrustedIssuerFacet__Unauthorized",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "TrustedIssuerFacet__ZeroAddress",
+    "inputs": []
+  }
+]
