@@ -1,0 +1,25 @@
+# Overview completo para dashboard: tokens + status + eventos recentes
+query DashboardOverview {
+  status {
+    lastBlock
+    tokenCount
+  }
+  tokens {
+    id
+    totalSupply
+    holderCount
+    holders(first: 10) {
+      address
+      balance
+    }
+  }
+  events(first: 20) {
+    txHash
+    block
+    tokenId
+    from
+    to
+    amount
+    eventType
+  }
+}

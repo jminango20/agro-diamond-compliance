@@ -34,7 +34,12 @@ func NewSchema(db *store.Store) (graphql.Schema, error) {
 	tokenType := graphql.NewObject(graphql.ObjectConfig{
 		Name: "Token",
 		Fields: graphql.Fields{
-			"id":          &graphql.Field{Type: graphql.NewNonNull(graphql.String)},
+			"id": &graphql.Field{
+				Type: graphql.NewNonNull(graphql.String),
+				Resolve: func(p graphql.ResolveParams) (interface{}, error) {
+					return p.Source.(*store.TokenMeta).TokenID, nil
+				},
+			},
 			"totalSupply": &graphql.Field{Type: graphql.NewNonNull(graphql.String)},
 			"holderCount": &graphql.Field{Type: graphql.NewNonNull(graphql.Int)},
 			"holders": &graphql.Field{

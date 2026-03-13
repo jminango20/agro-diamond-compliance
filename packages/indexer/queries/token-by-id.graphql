@@ -1,0 +1,24 @@
+# Busca um token específico por ID com holders e eventos recentes
+query TokenById($id: String!) {
+  token(id: $id) {
+    id
+    totalSupply
+    holderCount
+    holders(first: 50) {
+      address
+      balance
+    }
+    events(first: 20) {
+      txHash
+      block
+      logIndex
+      from
+      to
+      amount
+      eventType
+    }
+  }
+}
+
+# Variáveis:
+# { "id": "1" }

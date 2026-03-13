@@ -446,3 +446,18 @@ func (s *Store) RecordTransfer(tokenID string, from, to common.Address, amount *
 		EventType: eventType,
 	})
 }
+
+// RecordEventOnly persists a transfer event without modifying balances.
+// Used for ForcedTransfer which emits alongside TransferSingle (that already handles balances).
+func (s *Store) RecordEventOnly(tokenID string, from, to common.Address, amount *big.Int, eventType string, txHash common.Hash, block uint64, logIndex uint) error {
+	return s.putEvent(&TransferEvent{
+		TxHash:    txHash.Hex(),
+		Block:     block,
+		LogIndex:  logIndex,
+		From:      from.Hex(),
+		To:        to.Hex(),
+		TokenID:   tokenID,
+		Amount:    amount.String(),
+		EventType: eventType,
+	})
+}

@@ -41,8 +41,14 @@ func New(cfg *config.Config, store *store.Store) *Indexer {
 	return &Indexer{cfg: cfg, store: store}
 }
 
-// Run connects to the node via WebSocket and starts indexing events.
+// Run connects to the node, backfills historical events, then subscribes to new ones.
 func (idx *Indexer) Run(ctx context.Context) error {
+	// Backfill historical events via HTTP RPC
+	if err := idx.backfill(ctx); err != nil {
+		log.Printf("[indexer] backfill warning: %v (continuing with live subscription)", err)
+	}
+
+	// Subscribe to new events via WebSocket
 	client, err := ethclient.Dial(idx.cfg.RPCWSURL)
 	if err != nil {
 		return fmt.Errorf("failed to connect to node: %w", err)
@@ -75,6 +81,74 @@ func (idx *Indexer) Run(ctx context.Context) error {
 			idx.handleLog(vLog)
 		}
 	}
+}
+
+// backfill fetches historical logs from StartBlock (or last cursor) to latest block.
+func (idx *Indexer) backfill(ctx context.Context) error {
+	httpClient, err := ethclient.Dial(idx.cfg.RPCURL)
+	if err != nil {
+		return fmt.Errorf("backfill: failed to connect via HTTP: %w", err)
+	}
+	defer httpClient.Close()
+
+	// Determine start block: max(StartBlock, cursor+1)
+	fromBlock := idx.cfg.StartBlock
+	if cursor, err := idx.store.GetCursor(); err == nil && cursor > 0 {
+		if cursor+1 > fromBlock {
+			fromBlock = cursor + 1
+		}
+	}
+
+	if fromBlock == 0 {
+		log.Println("[indexer] backfill: no START_BLOCK configured and no cursor, skipping backfill")
+		return nil
+	}
+
+	latest, err := httpClient.BlockNumber(ctx)
+	if err != nil {
+		return fmt.Errorf("backfill: failed to get latest block: %w", err)
+	}
+
+	if fromBlock > latest {
+		log.Printf("[indexer] backfill: already up to date (cursor=%d, latest=%d)", fromBlock-1, latest)
+		return nil
+	}
+
+	log.Printf("[indexer] backfill: fetching logs from block %d to %d", fromBlock, latest)
+
+	// Fetch in chunks of 10000 blocks (RPC provider limit)
+	const chunkSize uint64 = 10000
+	totalProcessed := 0
+
+	for from := fromBlock; from <= latest; from += chunkSize + 1 {
+		to := from + chunkSize
+		if to > latest {
+			to = latest
+		}
+
+		query := ethereum.FilterQuery{
+			FromBlock: new(big.Int).SetUint64(from),
+			ToBlock:   new(big.Int).SetUint64(to),
+			Addresses: []common.Address{idx.cfg.DiamondAddress},
+		}
+
+		logs, err := httpClient.FilterLogs(ctx, query)
+		if err != nil {
+			return fmt.Errorf("backfill: FilterLogs(%d-%d) error: %w", from, to, err)
+		}
+
+		for _, vLog := range logs {
+			idx.handleLog(vLog)
+			totalProcessed++
+		}
+
+		if len(logs) > 0 {
+			log.Printf("[indexer] backfill: processed %d events in blocks %d-%d", len(logs), from, to)
+		}
+	}
+
+	log.Printf("[indexer] backfill: complete — %d events indexed", totalProcessed)
+	return nil
 }
 
 func (idx *Indexer) handleLog(vLog types.Log) {
@@ -155,8 +229,9 @@ func (idx *Indexer) handleForcedTransfer(vLog types.Log) {
 	to := common.BytesToAddress(vLog.Topics[3].Bytes())
 	amount := new(big.Int).SetBytes(vLog.Data[:32])
 
-	if err := idx.store.RecordTransfer(tokenID.String(), from, to, amount, "forced_transfer", vLog.TxHash, vLog.BlockNumber, vLog.Index); err != nil {
-		log.Printf("[indexer] RecordTransfer error: %v", err)
+	// Only record the event — balance updates are handled by the paired TransferSingle event
+	if err := idx.store.RecordEventOnly(tokenID.String(), from, to, amount, "forced_transfer", vLog.TxHash, vLog.BlockNumber, vLog.Index); err != nil {
+		log.Printf("[indexer] RecordEventOnly error: %v", err)
 		return
 	}
 	log.Printf("[indexer] ForcedTransfer tokenId=%s from=%s to=%s amount=%s block=%d",

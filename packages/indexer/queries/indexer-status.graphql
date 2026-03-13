@@ -1,0 +1,7 @@
+# Status de sincronização do indexer
+query IndexerStatus {
+  status {
+    lastBlock
+    tokenCount
+  }
+}

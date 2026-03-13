@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -38,10 +39,18 @@ func Load() (*Config, error) {
 		listen = ":8080"
 	}
 
+	var startBlock uint64
+	if sb := os.Getenv("START_BLOCK"); sb != "" {
+		if v, err := strconv.ParseUint(sb, 10, 64); err == nil {
+			startBlock = v
+		}
+	}
+
 	return &Config{
 		RPCURL:         rpc,
 		RPCWSURL:       ws,
 		DiamondAddress: common.HexToAddress(addr),
 		HTTPListenAddr: listen,
+		StartBlock:     startBlock,
 	}, nil
 }

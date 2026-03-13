@@ -1,0 +1,12 @@
+# Lista todos os tokens registrados com holders e supply
+query AllTokens {
+  tokens {
+    id
+    totalSupply
+    holderCount
+    holders(first: 50) {
+      address
+      balance
+    }
+  }
+}

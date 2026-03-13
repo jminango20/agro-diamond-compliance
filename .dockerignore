@@ -1,0 +1,12 @@
+node_modules/
+.git/
+packages/contracts/
+packages/tools/
+packages/indexer/
+packages/app/node_modules/
+packages/app/dist/
+docs/
+scripts/
+*.md
+.env
+.env.local

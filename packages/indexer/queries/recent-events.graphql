@@ -1,0 +1,16 @@
+# Busca os eventos mais recentes de todos os tokens (global)
+query RecentEvents($first: Int = 50) {
+  events(first: $first) {
+    txHash
+    block
+    logIndex
+    tokenId
+    from
+    to
+    amount
+    eventType
+  }
+}
+
+# Variáveis:
+# { "first": 100 }

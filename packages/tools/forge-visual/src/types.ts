@@ -117,13 +117,133 @@ export interface CoverageData {
   gitBranch: string | null;
 }
 
+// ── Traces ──
+
+export interface TraceTest {
+  name: string;
+  status: "pass" | "fail";
+  gas: number;
+  nodes: TraceNode[];
+}
+
+export interface TraceNode {
+  depth: number;
+  gas: number;
+  kind: "CALL" | "DELEGATECALL" | "STATICCALL" | "CREATE" | "EMIT" | "RETURN" | "REVERT" | "STOP" | "VM" | "OTHER";
+  contract: string;
+  func: string;
+  args: string;
+  returnData: string | null;
+  isRevert: boolean;
+  isEmit: boolean;
+  children: TraceNode[];
+}
+
+// ── Selector Map ──
+
+export interface SelectorEntry {
+  selector: string;
+  signature: string;
+  facet: string;
+}
+
+export interface SelectorMapData {
+  entries: SelectorEntry[];
+  collisions: { selector: string; facets: string[] }[];
+  facetCount: number;
+  totalSelectors: number;
+}
+
 // ── Dashboard ──
 
 export interface DashboardData {
   testReport: TestReport | null;
   gasReport: GasReportData | null;
   coverage: CoverageData | null;
+  selectorMap: SelectorMapData | null;
   generatedAt: string;
   gitRef: string | null;
   gitBranch: string | null;
 }
+
+export interface WsMessage {
+  type: WsMessageType;
+  data: unknown;
+  timestamp: string;
+}
+
+export type RunCommand = "test" | "gas" | "coverage" | "trace" | "selectors" | "report" | "list_tests" | "test_filtered" | "trace_test";
+
+// ── Humanized Trace ──
+
+export interface TraceStepData {
+  testName: string;
+  status: "pass" | "fail";
+  gasTotal: number;
+  steps: HumanStep[];
+}
+
+export interface HumanStep {
+  id: number;
+  icon: "setup" | "call" | "delegatecall" | "read" | "event" | "revert" | "check" | "create" | "return";
+  title: string;
+  description: string;
+  gasUsed: number;
+  gasPercent: number;
+  depth: number;
+  isError: boolean;
+  isEvent: boolean;
+  details?: string;
+  children: HumanStep[];
+}
+
+export interface RunRequest {
+  command: RunCommand;
+  args?: string[];
+}
+
+// ── Test Discovery ──
+
+export interface DiscoveredTest {
+  contract: string;
+  file: string;
+  name: string;
+}
+
+export interface TestListData {
+  contracts: {
+    name: string;
+    file: string;
+    tests: string[];
+  }[];
+  totalContracts: number;
+  totalTests: number;
+}
+
+// ── Project Info ──
+
+export interface ProjectInfo {
+  name: string;
+  solcVersion: string | null;
+  srcDir: string;
+  testDir: string;
+  isDiamond: boolean;
+  contractCount: number;
+  remappings: string[];
+}
+
+// ── WebSocket Messages ──
+
+export type WsMessageType =
+  | "status"
+  | "log"
+  | "test_result"
+  | "gas_result"
+  | "coverage_result"
+  | "trace_result"
+  | "selector_result"
+  | "dashboard"
+  | "test_list"
+  | "trace_step_result"
+  | "error"
+  | "complete";

@@ -32,18 +32,7 @@
     "dev": "bash scripts/dev.sh",
     "dev:app": "pnpm --filter @diamond-erc3643/app dev",
     "dev:indexer": "cd packages/indexer && make run",
-    "visual": "tsx packages/tools/forge-visual/src/cli.ts report -p packages/contracts -o reports --open",
-    "visual:report": "tsx packages/tools/forge-visual/src/cli.ts report -p packages/contracts -o reports",
-    "visual:report:open": "tsx packages/tools/forge-visual/src/cli.ts report -p packages/contracts -o reports --open",
-    "visual:report:fast": "tsx packages/tools/forge-visual/src/cli.ts report -p packages/contracts -o reports --skip-coverage --skip-trace --open",
-    "visual:test": "tsx packages/tools/forge-visual/src/cli.ts test -p packages/contracts -o reports",
-    "visual:gas": "tsx packages/tools/forge-visual/src/cli.ts gas -p packages/contracts -o reports",
-    "visual:coverage": "tsx packages/tools/forge-visual/src/cli.ts coverage -p packages/contracts -o reports",
-    "visual:summary": "tsx packages/tools/forge-visual/src/cli.ts summary -p packages/contracts -o reports",
-    "visual:trace": "tsx packages/tools/forge-visual/src/cli.ts trace -p packages/contracts -o reports",
-    "visual:trace:open": "tsx packages/tools/forge-visual/src/cli.ts trace -p packages/contracts -o reports --open",
-    "visual:test:open": "tsx packages/tools/forge-visual/src/cli.ts test -p packages/contracts -o reports --open",
-    "visual:summary:open": "tsx packages/tools/forge-visual/src/cli.ts summary -p packages/contracts -o reports --open"
+    "test:ui": "cd packages/tools/forge-visual && FORGE_PROJECT=../../contracts pnpm dev"
   },
   "devDependencies": {
     "@changesets/cli": "^2.29.4",
