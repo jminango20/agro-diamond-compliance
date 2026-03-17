@@ -112,16 +112,16 @@
       "url": "https://amoy.polygonscan.com/address/0x663217FCFC5807636b1201b413921Ab01b1C6Be0"
     },
     "EIP1967Init": {
-      "address": "0x377590396353b83d4B4637D7E8A56fFdBA364277",
+      "address": "0xf3CaCc4Dd1a45Ee76AEf683e1d3C77376d5A5E41",
       "verified": true,
-      "url": "https://amoy.polygonscan.com/address/0x377590396353b83d4b4637d7e8a56ffdba364277",
-      "note": "v2 — updated with plugin system ABI"
+      "url": "https://amoy.polygonscan.com/address/0xf3CaCc4Dd1a45Ee76AEf683e1d3C77376d5A5E41",
+      "note": "v3 — updated with custom errors ABI"
     },
     "DiamondABI": {
-      "address": "0xf164d030005Db7845ed756D69f17470868d69E5b",
+      "address": "0xcB5B9a4665523c340ee34C7198BAAe446FDbF847",
       "verified": true,
-      "url": "https://amoy.polygonscan.com/address/0xf164d030005db7845ed756d69f17470868d69e5b",
-      "note": "v2 — includes GlobalPlugin, PluginModule, PluginRouter sections"
+      "url": "https://amoy.polygonscan.com/address/0xcB5B9a4665523c340ee34C7198BAAe446FDbF847",
+      "note": "v3 — includes all custom errors from all facets"
     },
     "CountryRestrictModule": {
       "address": "0x0c15e06c36b07E44aEe6D49a75554bc7bfFa50D2",

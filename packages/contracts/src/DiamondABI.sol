@@ -14,6 +14,131 @@ import {IHookablePlugin} from "./interfaces/plugins/IHookablePlugin.sol";
 ///      the Diamond to point here. Polygonscan reads this ABI for the proxy UI.
 contract DiamondABI {
     /*//////////////////////////////////////////////////////////////
+                          CUSTOM ERRORS
+    //////////////////////////////////////////////////////////////*/
+
+    // ERC1155Facet
+    error ERC1155Facet__NotApprovedOrOwner();
+    error ERC1155Facet__TransferToZeroAddress();
+    error ERC1155Facet__InsufficientFreeBalance(uint256 tokenId, address account, uint256 available, uint256 required);
+    error ERC1155Facet__ArrayLengthMismatch();
+    error ERC1155Facet__ProtocolPaused();
+    error ERC1155Facet__AssetPaused(uint256 tokenId);
+    error ERC1155Facet__AssetNotRegistered(uint256 tokenId);
+    error ERC1155Facet__WalletFrozenGlobal(address wallet);
+    error ERC1155Facet__WalletFrozenAsset(uint256 tokenId, address wallet);
+    error ERC1155Facet__LockupActive(uint256 tokenId, address wallet, uint64 expiry);
+    error ERC1155Facet__ComplianceRejected(uint256 tokenId, bytes32 reason);
+    error ERC1155Facet__SelfApproval();
+    error ERC1155Facet__InvalidReceiver(address to);
+
+    // SupplyFacet
+    error SupplyFacet__Unauthorized();
+    error SupplyFacet__AssetNotRegistered(uint256 tokenId);
+    error SupplyFacet__AssetPaused(uint256 tokenId);
+    error SupplyFacet__ProtocolPaused();
+    error SupplyFacet__MintToZeroAddress();
+    error SupplyFacet__BurnFromZeroAddress();
+    error SupplyFacet__TransferToZeroAddress();
+    error SupplyFacet__SupplyCapExceeded(uint256 tokenId, uint256 currentSupply, uint256 cap);
+    error SupplyFacet__InsufficientFreeBalance(uint256 tokenId, address account, uint256 available, uint256 required);
+    error SupplyFacet__WalletFrozenGlobal(address wallet);
+    error SupplyFacet__WalletFrozenAsset(uint256 tokenId, address wallet);
+    error SupplyFacet__ArrayLengthMismatch();
+
+    // AssetManagerFacet
+    error AssetManagerFacet__NotRegistered(uint256 tokenId);
+    error AssetManagerFacet__ZeroAddress();
+    error AssetManagerFacet__EmptyString();
+    error AssetManagerFacet__Unauthorized();
+    error AssetManagerFacet__TooManyModules(uint256 count, uint256 max);
+    error AssetManagerFacet__ModuleNotFound(address module);
+    error AssetManagerFacet__ModuleAlreadyAdded(address module);
+    error AssetManagerFacet__TooManyPluginModules(uint256 count, uint256 max);
+    error AssetManagerFacet__PluginModuleNotFound(address module);
+    error AssetManagerFacet__PluginModuleAlreadyAdded(address module);
+
+    // AccessControlFacet
+    error AccessControlFacet__ZeroAddress();
+    error AccessControlFacet__RoleAdminOnly(bytes32 role, address account);
+
+    // PauseFacet
+    error PauseFacet__AlreadyPaused();
+    error PauseFacet__NotPaused();
+    error PauseFacet__AssetAlreadyPaused(uint256 tokenId);
+    error PauseFacet__AssetNotPaused(uint256 tokenId);
+    error PauseFacet__AssetNotRegistered(uint256 tokenId);
+    error PauseFacet__Unauthorized();
+
+    // EmergencyFacet
+    error EmergencyFacet__Unauthorized();
+    error EmergencyFacet__AlreadyPaused();
+
+    // FreezeFacet
+    error FreezeFacet__Unauthorized();
+    error FreezeFacet__ZeroAddress();
+
+    // RecoveryFacet
+    error RecoveryFacet__Unauthorized();
+    error RecoveryFacet__ZeroAddress();
+    error RecoveryFacet__SameAddress();
+    error RecoveryFacet__NewWalletAlreadyRegistered();
+
+    // SnapshotFacet
+    error SnapshotFacet__Unauthorized();
+    error SnapshotFacet__AssetNotRegistered(uint256 tokenId);
+    error SnapshotFacet__SnapshotNotFound(uint256 snapshotId);
+    error SnapshotFacet__HolderAlreadyRecorded(uint256 snapshotId, address holder);
+
+    // DividendFacet
+    error DividendFacet__Unauthorized();
+    error DividendFacet__SnapshotNotFound(uint256 snapshotId);
+    error DividendFacet__DividendNotFound(uint256 dividendId);
+    error DividendFacet__ZeroAmount();
+    error DividendFacet__AlreadyClaimed(uint256 dividendId, address holder);
+    error DividendFacet__HolderNotRecorded(uint256 dividendId, address holder);
+    error DividendFacet__NothingToClaim(uint256 dividendId, address holder);
+    error DividendFacet__TransferFailed();
+    error DividendFacet__InsufficientETH();
+
+    // AssetGroupFacet
+    error AssetGroupFacet__Unauthorized();
+    error AssetGroupFacet__ParentNotRegistered(uint256 parentTokenId);
+    error AssetGroupFacet__GroupNotFound(uint256 groupId);
+    error AssetGroupFacet__MaxUnitsReached(uint256 groupId, uint256 maxUnits);
+    error AssetGroupFacet__ChildTokenIdCollision(uint256 childTokenId);
+    error AssetGroupFacet__EmptyName();
+    error AssetGroupFacet__ProtocolPaused();
+    error AssetGroupFacet__MintToZeroAddress();
+    error AssetGroupFacet__ReceiverFrozen(address account);
+    error AssetGroupFacet__EmptyBatch();
+
+    // IdentityRegistryFacet
+    error IdentityRegistryFacet__ZeroAddress();
+    error IdentityRegistryFacet__AlreadyRegistered(address wallet);
+    error IdentityRegistryFacet__NotRegistered(address wallet);
+    error IdentityRegistryFacet__Unauthorized();
+    error IdentityRegistryFacet__ArrayLengthMismatch();
+
+    // ClaimTopicsFacet
+    error ClaimTopicsFacet__ProfileNotFound(uint32 profileId);
+    error ClaimTopicsFacet__Unauthorized();
+    error ClaimTopicsFacet__EmptyClaimTopics();
+
+    // TrustedIssuerFacet
+    error TrustedIssuerFacet__ProfileNotFound(uint32 profileId);
+    error TrustedIssuerFacet__ZeroAddress();
+    error TrustedIssuerFacet__AlreadyTrusted(uint32 profileId, address issuer);
+    error TrustedIssuerFacet__NotTrusted(uint32 profileId, address issuer);
+    error TrustedIssuerFacet__Unauthorized();
+
+    // ComplianceRouterFacet
+    error ComplianceRouterFacet__AssetNotRegistered(uint256 tokenId);
+
+    // PluginRouterFacet
+    error PluginRouterFacet__AssetNotRegistered(uint256 tokenId);
+
+    /*//////////////////////////////////////////////////////////////
                               STRUCTS
     //////////////////////////////////////////////////////////////*/
 
