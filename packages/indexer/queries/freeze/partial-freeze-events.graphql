@@ -1,0 +1,22 @@
+# Eventos de partial freeze (congelamento parcial de tokens)
+query PartialFreezeEvents($first: Int = 50) {
+  protocolEvents(first: $first, eventType: "partial_freeze") {
+    txHash
+    block
+    logIndex
+    eventType
+    tokenId
+    address
+    data
+  }
+}
+
+# Exemplo 1 — Ultimos 50 partial freezes:
+# {}
+#
+# Exemplo 2 — Partial freezes de um token especifico:
+# { "first": 50 }
+# (filtre por tokenId no resultado — o campo data contem o amount)
+#
+# O campo "data" contem JSON com:
+# { "amount": "1000000" }

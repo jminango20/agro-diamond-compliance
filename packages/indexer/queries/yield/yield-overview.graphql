@@ -1,0 +1,50 @@
+# Overview de yield para um asset: depositos + claims + reward assets registrados
+# Combina todos os eventos do YieldDistributorModule para um tokenId
+
+query YieldOverview($tokenId: String!, $first: Int = 20) {
+  # Asset metadata
+  asset(id: $tokenId) {
+    id
+    name
+    symbol
+    totalSupply
+    holderCount
+  }
+
+  # Yield deposits
+  deposits: protocolEvents(first: $first, eventType: "yield_deposited", tokenId: $tokenId) {
+    txHash
+    block
+    eventType
+    data
+  }
+
+  # Yield claims
+  claims: protocolEvents(first: $first, eventType: "yield_claimed", tokenId: $tokenId) {
+    txHash
+    block
+    eventType
+    address
+    data
+  }
+
+  # Reward assets configured
+  rewardAssets: protocolEvents(first: 10, eventType: "reward_asset_added", tokenId: $tokenId) {
+    txHash
+    block
+    eventType
+    data
+  }
+}
+
+# Exemplo 1 — Overview de yield do token 1:
+# { "tokenId": "1" }
+#
+# Exemplo 2 — Overview com mais eventos:
+# { "tokenId": "1", "first": 50 }
+#
+# Retorna em uma unica chamada:
+# - Metadata do asset (name, symbol, supply, holders)
+# - Depositos de yield (quando, quanto)
+# - Claims de yield (quem reivindicou, quanto)
+# - Reward assets configurados (quais tokens de recompensa)

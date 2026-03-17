@@ -1,0 +1,22 @@
+# Eventos de transferencia de um token (mints, burns, transfers, forced_transfers)
+query TokenEvents($id: String!, $first: Int = 50) {
+  token(id: $id) {
+    id
+    totalSupply
+    events(first: $first) {
+      txHash
+      block
+      logIndex
+      from
+      to
+      amount
+      eventType
+    }
+  }
+}
+
+# Exemplo 1 — Ultimos 50 eventos do token 1:
+# { "id": "1" }
+#
+# Exemplo 2 — Ultimos 100 eventos do token 3:
+# { "id": "3", "first": 100 }

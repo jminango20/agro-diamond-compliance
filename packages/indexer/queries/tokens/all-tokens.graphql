@@ -1,0 +1,8 @@
+# Lista todos os tokens registrados com supply e contagem de holders
+query AllTokens {
+  tokens {
+    id
+    totalSupply
+    holderCount
+  }
+}

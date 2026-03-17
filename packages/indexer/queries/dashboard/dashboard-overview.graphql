@@ -1,8 +1,17 @@
-# Overview completo para dashboard: tokens + status + eventos recentes
+# Overview completo para dashboard: status + assets + tokens + eventos
 query DashboardOverview {
   status {
     lastBlock
     tokenCount
+  }
+  assets {
+    id
+    name
+    symbol
+    issuer
+    paused
+    totalSupply
+    holderCount
   }
   tokens {
     id
@@ -21,5 +30,13 @@ query DashboardOverview {
     to
     amount
     eventType
+  }
+  protocolEvents(first: 10) {
+    txHash
+    block
+    eventType
+    tokenId
+    address
+    data
   }
 }

@@ -1,0 +1,23 @@
+# Portfolio enriquecido: holdings + metadata dos assets
+query WalletPortfolioWithAssets($address: String!) {
+  portfolio(address: $address) {
+    tokenId
+    balance
+  }
+  assets {
+    id
+    name
+    symbol
+    issuer
+    paused
+    totalSupply
+    holderCount
+  }
+}
+
+# Exemplo:
+# { "address": "0xB40061C7bf8394eb130Fcb5EA06868064593BFAa" }
+#
+# Combina portfolio (tokenId + balance) com a lista de assets (name, symbol, etc.)
+# para exibir o portfolio com metadados completos no frontend.
+# Faca o match pelo tokenId do portfolio com o id do asset.

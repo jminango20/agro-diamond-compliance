@@ -1,0 +1,19 @@
+# Lista todas as wallets congeladas, com filtro opcional por tokenId
+query FrozenWallets($tokenId: String) {
+  frozenWallets(tokenId: $tokenId) {
+    wallet
+    tokenId
+    frozen
+    frozenAmount
+    lockupExpiry
+  }
+}
+
+# Exemplo 1 — Todas as wallets congeladas (global + per-asset):
+# {}
+#
+# Exemplo 2 — Wallets congeladas apenas no asset 1:
+# { "tokenId": "1" }
+#
+# Exemplo 3 — Wallets congeladas no asset 5:
+# { "tokenId": "5" }

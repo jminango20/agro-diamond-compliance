@@ -1,4 +1,4 @@
-# Status de sincronização do indexer
+# Status de sincronizacao do indexer
 query IndexerStatus {
   status {
     lastBlock

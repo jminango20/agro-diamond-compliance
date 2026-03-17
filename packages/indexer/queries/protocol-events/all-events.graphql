@@ -1,0 +1,18 @@
+# Todos os eventos recentes do protocolo (sem filtro)
+query AllProtocolEvents($first: Int = 50) {
+  protocolEvents(first: $first) {
+    txHash
+    block
+    logIndex
+    eventType
+    tokenId
+    address
+    data
+  }
+}
+
+# Exemplo 1 — Ultimos 50 eventos:
+# {}
+#
+# Exemplo 2 — Ultimos 200 eventos:
+# { "first": 200 }

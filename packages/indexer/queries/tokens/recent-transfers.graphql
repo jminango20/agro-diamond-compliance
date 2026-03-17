@@ -1,0 +1,28 @@
+# Eventos de transferencia recentes (global, todos os tokens)
+query RecentTransfers($first: Int = 50) {
+  events(first: $first) {
+    txHash
+    block
+    logIndex
+    tokenId
+    from
+    to
+    amount
+    eventType
+  }
+}
+
+# Exemplo 1 — Ultimos 50 eventos:
+# {}
+#
+# Exemplo 2 — Ultimos 20 eventos:
+# { "first": 20 }
+#
+# Exemplo 3 — Ultimos 200 eventos:
+# { "first": 200 }
+#
+# Tipos de eventType retornados:
+# - "mint"             (from = 0x0)
+# - "burn"             (to = 0x0)
+# - "transfer"         (safeTransferFrom)
+# - "forced_transfer"  (forcedTransfer por agent)

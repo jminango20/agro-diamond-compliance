@@ -1,0 +1,20 @@
+# Holders de um asset com metadata basica
+query AssetHolders($id: String!, $first: Int = 50) {
+  asset(id: $id) {
+    id
+    name
+    symbol
+    totalSupply
+    holderCount
+    holders(first: $first) {
+      address
+      balance
+    }
+  }
+}
+
+# Exemplo 1 — Top 50 holders do asset 1:
+# { "id": "1" }
+#
+# Exemplo 2 — Top 10 holders do asset 3:
+# { "id": "3", "first": 10 }

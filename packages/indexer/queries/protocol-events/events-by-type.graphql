@@ -1,0 +1,99 @@
+# Eventos do protocolo filtrados por tipo
+query EventsByType($eventType: String!, $first: Int = 50) {
+  protocolEvents(first: $first, eventType: $eventType) {
+    txHash
+    block
+    logIndex
+    eventType
+    tokenId
+    address
+    data
+  }
+}
+
+# === ASSET LIFECYCLE ===
+#
+# Exemplo — Assets registrados:
+# { "eventType": "asset_registered" }
+#
+# Exemplo — Configuracao de asset atualizada:
+# { "eventType": "asset_config_updated" }
+#
+# Exemplo — URI atualizada:
+# { "eventType": "uri_updated" }
+#
+# === IDENTITY ===
+#
+# Exemplo — Identidades vinculadas:
+# { "eventType": "identity_bound" }
+#
+# Exemplo — Identidades desvinculadas:
+# { "eventType": "identity_unbound" }
+#
+# === FREEZE / SECURITY ===
+#
+# Exemplo — Wallets congeladas/descongeladas:
+# { "eventType": "wallet_frozen" }
+#
+# Exemplo — Assets congelados per-wallet:
+# { "eventType": "asset_frozen" }
+#
+# Exemplo — Freeze parcial:
+# { "eventType": "partial_freeze" }
+#
+# Exemplo — Lockup definido:
+# { "eventType": "lockup_set" }
+#
+# === ACCESS CONTROL ===
+#
+# Exemplo — Roles concedidos:
+# { "eventType": "role_granted" }
+#
+# Exemplo — Roles revogados:
+# { "eventType": "role_revoked" }
+#
+# === PAUSE ===
+#
+# Exemplo — Emergency pause:
+# { "eventType": "emergency_pause" }
+#
+# Exemplo — Protocolo despausado:
+# { "eventType": "protocol_unpaused" }
+#
+# Exemplo — Asset pausado:
+# { "eventType": "asset_paused" }
+#
+# Exemplo — Asset despausado:
+# { "eventType": "asset_unpaused" }
+#
+# === RECOVERY ===
+#
+# Exemplo — Wallet recuperada:
+# { "eventType": "wallet_recovered" }
+#
+# === SNAPSHOTS & DIVIDENDS ===
+#
+# Exemplo — Snapshots criados:
+# { "eventType": "snapshot_created" }
+#
+# Exemplo — Dividendos criados:
+# { "eventType": "dividend_created" }
+#
+# Exemplo — Dividendos reivindicados:
+# { "eventType": "dividend_claimed" }
+#
+# === COMPLIANCE ===
+#
+# Exemplo — Modulo de compliance adicionado:
+# { "eventType": "compliance_module_added" }
+#
+# Exemplo — Modulo de compliance removido:
+# { "eventType": "compliance_module_removed" }
+#
+# === ASSET GROUPS ===
+#
+# Exemplo — Grupos criados:
+# { "eventType": "group_created" }
+#
+# Exemplo — Unidades mintadas:
+# { "eventType": "unit_minted" }

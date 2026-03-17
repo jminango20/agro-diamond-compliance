@@ -1,0 +1,22 @@
+# Estados de freeze de uma wallet (global + per-asset)
+query FreezesByWallet($wallet: String!) {
+  freezes(wallet: $wallet) {
+    wallet
+    tokenId
+    frozen
+    frozenAmount
+    lockupExpiry
+  }
+}
+
+# Exemplo 1 — Verificar freezes do deployer:
+# { "wallet": "0xB40061C7bf8394eb130Fcb5EA06868064593BFAa" }
+#
+# Exemplo 2 — Verificar freezes de outro holder:
+# { "wallet": "0x1234567890abcdef1234567890abcdef12345678" }
+#
+# Retorno:
+# - tokenId = null  → freeze global (todas as classes de ativo)
+# - tokenId = "1"   → freeze especifico do asset 1
+# - frozenAmount    → quantidade parcialmente congelada (partial freeze)
+# - lockupExpiry    → timestamp Unix de expiracao do lockup (0 = sem lockup)

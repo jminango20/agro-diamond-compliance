@@ -1,0 +1,28 @@
+# Eventos de compliance modules (adicionados e removidos)
+query ComplianceModuleAddedEvents($first: Int = 50, $tokenId: String) {
+  protocolEvents(first: $first, eventType: "compliance_module_added", tokenId: $tokenId) {
+    txHash
+    block
+    logIndex
+    eventType
+    tokenId
+    address
+    data
+  }
+}
+
+# Exemplo 1 — Todos os modulos adicionados:
+# {}
+#
+# Exemplo 2 — Modulos adicionados no token 1:
+# { "tokenId": "1" }
+#
+# Para modulos removidos, use eventType: "compliance_module_removed"
+#
+# O campo "data" contem JSON com:
+# { "module": "0x..." }
+#
+# Modulos conhecidos:
+# - CountryRestrictModule  — restricao por pais
+# - MaxBalanceModule       — limite maximo de balance por holder
+# - MaxHoldersModule       — limite maximo de holders por tokenId

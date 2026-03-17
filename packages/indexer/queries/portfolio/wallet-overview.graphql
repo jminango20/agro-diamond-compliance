@@ -1,0 +1,35 @@
+# Overview completo de uma wallet: identidade + portfolio + freezes + eventos
+query WalletOverview($address: String!) {
+  identity(wallet: $address) {
+    wallet
+    identity
+    country
+    boundAt
+  }
+  portfolio(address: $address) {
+    tokenId
+    balance
+  }
+  freezes(wallet: $address) {
+    tokenId
+    frozen
+    frozenAmount
+    lockupExpiry
+  }
+  protocolEvents(first: 20, address: $address) {
+    txHash
+    block
+    eventType
+    tokenId
+    data
+  }
+}
+
+# Exemplo 1 — Overview completo do deployer:
+# { "address": "0xB40061C7bf8394eb130Fcb5EA06868064593BFAa" }
+#
+# Retorna em uma unica chamada:
+# - Identidade KYC (ONCHAINID, pais, bloco de registro)
+# - Portfolio (todos os tokens que a wallet possui com balances)
+# - Status de freeze (global e per-asset)
+# - Ultimos 20 eventos de protocolo relacionados a essa wallet

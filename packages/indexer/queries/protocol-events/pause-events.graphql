@@ -1,0 +1,25 @@
+# Eventos de pause/unpause do protocolo e assets
+query EmergencyPauseEvents($first: Int = 50) {
+  protocolEvents(first: $first, eventType: "emergency_pause") {
+    txHash
+    block
+    logIndex
+    eventType
+    address
+    data
+  }
+}
+
+# Exemplo 1 — Emergency pauses:
+# {}
+#
+# Outros tipos de pause:
+#
+# Exemplo 2 — Protocolo despausado:
+# Use eventType: "protocol_unpaused"
+#
+# Exemplo 3 — Asset pausado:
+# Use eventType: "asset_paused"
+#
+# Exemplo 4 — Asset despausado:
+# Use eventType: "asset_unpaused"

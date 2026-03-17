@@ -1,0 +1,11 @@
+# Verifica status de pause de todos os assets
+query AssetStatus {
+  assets {
+    id
+    name
+    symbol
+    paused
+    totalSupply
+    holderCount
+  }
+}

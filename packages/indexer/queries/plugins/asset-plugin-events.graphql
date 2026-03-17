@@ -1,0 +1,57 @@
+# Eventos de plugins per-asset (hookable modules vinculados a tokenIds)
+#
+# AssetManagerFacet emite:
+# - PluginModuleAdded(uint256 indexed tokenId, address indexed module)
+# - PluginModuleRemoved(uint256 indexed tokenId, address indexed module)
+# - PluginModulesSet(uint256 indexed tokenId, address[] modules)
+
+# Plugin modules adicionados a um asset
+query PluginModuleAddedEvents($first: Int = 50, $tokenId: String) {
+  protocolEvents(first: $first, eventType: "plugin_module_added", tokenId: $tokenId) {
+    txHash
+    block
+    logIndex
+    eventType
+    tokenId
+    address
+    data
+  }
+}
+
+# Exemplo 1 — Todos os plugin modules adicionados:
+# {}
+#
+# Exemplo 2 — Plugin modules do token 1:
+# { "tokenId": "1" }
+#
+# O campo "data" contem JSON com:
+# { "module": "0x..." }
+
+# ---
+
+# Plugin modules removidos:
+# query PluginModuleRemovedEvents($first: Int = 50, $tokenId: String) {
+#   protocolEvents(first: $first, eventType: "plugin_module_removed", tokenId: $tokenId) {
+#     txHash
+#     block
+#     eventType
+#     tokenId
+#     data
+#   }
+# }
+
+# ---
+
+# Plugin modules definidos em batch (set):
+# query PluginModulesSetEvents($first: Int = 50, $tokenId: String) {
+#   protocolEvents(first: $first, eventType: "plugin_modules_set", tokenId: $tokenId) {
+#     txHash
+#     block
+#     eventType
+#     tokenId
+#     data
+#   }
+# }
+#
+# O campo "data" contem JSON com:
+# { "modules": ["0x...", "0x..."] }

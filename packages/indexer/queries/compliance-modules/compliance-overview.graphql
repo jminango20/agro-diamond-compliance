@@ -1,0 +1,73 @@
+# Overview de compliance para um asset: modules + restricoes + eventos
+# Combina dados de compliance modules e regras aplicadas
+
+query ComplianceOverview($tokenId: String!, $first: Int = 20) {
+  # Asset metadata
+  asset(id: $tokenId) {
+    id
+    name
+    symbol
+    paused
+    totalSupply
+    holderCount
+  }
+
+  # Compliance modules adicionados ao asset
+  modulesAdded: protocolEvents(first: $first, eventType: "compliance_module_added", tokenId: $tokenId) {
+    txHash
+    block
+    eventType
+    data
+  }
+
+  # Compliance modules removidos
+  modulesRemoved: protocolEvents(first: $first, eventType: "compliance_module_removed", tokenId: $tokenId) {
+    txHash
+    block
+    eventType
+    data
+  }
+
+  # Paises restritos
+  countryRestrictions: protocolEvents(first: $first, eventType: "country_restricted", tokenId: $tokenId) {
+    txHash
+    block
+    eventType
+    data
+  }
+
+  # Limites de balance
+  balanceLimits: protocolEvents(first: 5, eventType: "max_balance_set", tokenId: $tokenId) {
+    txHash
+    block
+    eventType
+    data
+  }
+
+  # Limites de holders
+  holderLimits: protocolEvents(first: 5, eventType: "max_holders_set", tokenId: $tokenId) {
+    txHash
+    block
+    eventType
+    data
+  }
+
+  # Plugin modules (hookable — ex: YieldDistributor)
+  pluginModules: protocolEvents(first: $first, eventType: "plugin_module_added", tokenId: $tokenId) {
+    txHash
+    block
+    eventType
+    data
+  }
+}
+
+# Exemplo 1 — Overview de compliance do token 1:
+# { "tokenId": "1" }
+#
+# Retorna em uma unica chamada:
+# - Metadata do asset
+# - Compliance modules vinculados (CountryRestrict, MaxBalance, MaxHolders)
+# - Paises bloqueados
+# - Limite de balance por holder
+# - Limite de holders unicos
+# - Plugin modules hookable (YieldDistributor, etc.)

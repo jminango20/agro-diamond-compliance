@@ -1,0 +1,15 @@
+# Lista todos os assets registrados com metadata completa
+query AllAssets {
+  assets {
+    id
+    name
+    symbol
+    issuer
+    profileId
+    uri
+    paused
+    totalSupply
+    holderCount
+    registeredAt
+  }
+}

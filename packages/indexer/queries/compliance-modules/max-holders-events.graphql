@@ -1,0 +1,29 @@
+# Eventos do MaxHoldersModule
+#
+# Emite:
+# MaxHoldersSet(uint256 indexed tokenId, uint256 maxHolders)
+#
+# Define o numero maximo de holders unicos para um tokenId.
+# Necessario para regulamentacoes como Reg D 506(b) (max 35 non-accredited).
+# Modulo externo ao Diamond — requer EXTRA_ADDRESSES no indexer config.
+
+query MaxHoldersSetEvents($first: Int = 50, $tokenId: String) {
+  protocolEvents(first: $first, eventType: "max_holders_set", tokenId: $tokenId) {
+    txHash
+    block
+    logIndex
+    eventType
+    tokenId
+    data
+  }
+}
+
+# Exemplo 1 — Todos os limites de holders definidos:
+# {}
+#
+# Exemplo 2 — Limites do token 1:
+# { "tokenId": "1" }
+#
+# O campo "data" contem JSON com:
+# { "maxHolders": "35" }
+# (0 = sem limite)

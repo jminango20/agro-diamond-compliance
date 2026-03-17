@@ -1,0 +1,19 @@
+# Eventos de lockup (bloqueio com expiracao temporal)
+query LockupEvents($first: Int = 50) {
+  protocolEvents(first: $first, eventType: "lockup_set") {
+    txHash
+    block
+    logIndex
+    eventType
+    tokenId
+    address
+    data
+  }
+}
+
+# Exemplo 1 — Ultimos 50 lockups definidos:
+# {}
+#
+# O campo "data" contem JSON com:
+# { "expiry": "1710000000" }
+# (expiry = Unix timestamp de quando o lockup expira)

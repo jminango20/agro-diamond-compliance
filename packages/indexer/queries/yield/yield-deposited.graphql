@@ -1,0 +1,36 @@
+# Eventos de yield depositado para distribuicao proporcional aos holders
+#
+# YieldDistributorModule emite:
+# YieldDeposited(uint256 indexed tokenId, bytes32 indexed rewardKey, uint256 amount)
+#
+# O YieldDistributorModule usa o padrao Synthetix/MasterChef accumulator (O(1)):
+# - Admin registra reward assets (ERC-20 ou ERC-1155) para um tokenId
+# - Admin deposita yield via depositYield()
+# - Holders chamam claimYield() para retirar recompensas acumuladas
+
+query YieldDepositedEvents($first: Int = 50, $tokenId: String) {
+  protocolEvents(first: $first, eventType: "yield_deposited", tokenId: $tokenId) {
+    txHash
+    block
+    logIndex
+    eventType
+    tokenId
+    address
+    data
+  }
+}
+
+# Exemplo 1 — Todos os depositos de yield:
+# {}
+#
+# Exemplo 2 — Depositos de yield do token 1:
+# { "tokenId": "1" }
+#
+# Exemplo 3 — Ultimos 100 depositos:
+# { "first": 100 }
+#
+# O campo "data" contem JSON com:
+# { "rewardKey": "0x...", "amount": "1000000" }
+#
+# rewardKey = keccak256(abi.encode(tokenAddress, tokenId, rewardType))
+# rewardType: 0 = ERC-20, 1 = ERC-1155

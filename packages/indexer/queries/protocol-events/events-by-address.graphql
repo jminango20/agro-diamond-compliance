@@ -1,0 +1,18 @@
+# Eventos do protocolo filtrados por endereco (wallet)
+query EventsByAddress($address: String!, $first: Int = 50) {
+  protocolEvents(first: $first, address: $address) {
+    txHash
+    block
+    logIndex
+    eventType
+    tokenId
+    address
+    data
+  }
+}
+
+# Exemplo 1 — Todos os eventos do deployer:
+# { "address": "0xB40061C7bf8394eb130Fcb5EA06868064593BFAa" }
+#
+# Exemplo 2 — Ultimos 20 eventos de um holder:
+# { "address": "0x1234567890abcdef1234567890abcdef12345678", "first": 20 }

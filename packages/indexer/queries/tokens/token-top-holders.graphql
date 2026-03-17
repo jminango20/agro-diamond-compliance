@@ -1,0 +1,21 @@
+# Top holders de um token
+query TokenTopHolders($id: String!, $first: Int = 10) {
+  token(id: $id) {
+    id
+    totalSupply
+    holderCount
+    holders(first: $first) {
+      address
+      balance
+    }
+  }
+}
+
+# Exemplo 1 — Top 10 holders do token 1:
+# { "id": "1" }
+#
+# Exemplo 2 — Top 5 holders do token 2:
+# { "id": "2", "first": 5 }
+#
+# Exemplo 3 — Todos holders (max 50) do token 1:
+# { "id": "1", "first": 50 }

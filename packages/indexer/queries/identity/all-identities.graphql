@@ -1,0 +1,15 @@
+# Lista todas as identidades registradas no protocolo
+query AllIdentities($first: Int = 50) {
+  identities(first: $first) {
+    wallet
+    identity
+    country
+    boundAt
+  }
+}
+
+# Exemplo 1 — Primeiras 50 identidades:
+# {}
+#
+# Exemplo 2 — Primeiras 200 identidades:
+# { "first": 200 }

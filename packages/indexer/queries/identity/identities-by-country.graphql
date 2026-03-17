@@ -1,0 +1,32 @@
+# Lista identidades filtradas por pais (ISO 3166-1 numeric)
+query IdentitiesByCountry($country: Int!, $first: Int = 50) {
+  identities(country: $country, first: $first) {
+    wallet
+    identity
+    country
+    boundAt
+  }
+}
+
+# Exemplo 1 — Identidades do Brasil:
+# { "country": 76 }
+#
+# Exemplo 2 — Identidades dos EUA (top 100):
+# { "country": 840, "first": 100 }
+#
+# Exemplo 3 — Identidades do Reino Unido:
+# { "country": 826 }
+#
+# Exemplo 4 — Identidades da Alemanha:
+# { "country": 276 }
+#
+# Codigos de pais (ISO 3166-1 numeric):
+#   36 = Australia      40 = Austria
+#   56 = Belgica        76 = Brasil
+#  124 = Canada        156 = China
+#  250 = Franca        276 = Alemanha
+#  356 = India         380 = Italia
+#  392 = Japao         410 = Coreia do Sul
+#  528 = Holanda       620 = Portugal
+#  724 = Espanha       756 = Suica
+#  826 = Reino Unido   840 = EUA

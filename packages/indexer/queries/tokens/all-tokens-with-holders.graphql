@@ -1,5 +1,5 @@
-# Lista todos os tokens registrados com holders e supply
-query AllTokens {
+# Lista todos os tokens com seus top holders
+query AllTokensWithHolders {
   tokens {
     id
     totalSupply

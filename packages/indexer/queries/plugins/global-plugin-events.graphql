@@ -1,0 +1,56 @@
+# Eventos de plugins globais (register, remove, status change)
+#
+# GlobalPluginFacet emite:
+# - GlobalPluginRegistered(address indexed plugin, string name)
+# - GlobalPluginRemoved(address indexed plugin)
+# - GlobalPluginStatusChanged(address indexed plugin, bool active)
+
+# Plugins registrados
+query GlobalPluginRegisteredEvents($first: Int = 50) {
+  protocolEvents(first: $first, eventType: "global_plugin_registered") {
+    txHash
+    block
+    logIndex
+    eventType
+    address
+    data
+  }
+}
+
+# Exemplo:
+# {}
+#
+# O campo "data" contem JSON com:
+# { "plugin": "0x...", "name": "YieldDistributor" }
+
+# ---
+
+# Plugins removidos:
+# query GlobalPluginRemovedEvents($first: Int = 50) {
+#   protocolEvents(first: $first, eventType: "global_plugin_removed") {
+#     txHash
+#     block
+#     eventType
+#     address
+#     data
+#   }
+# }
+#
+# O campo "data" contem JSON com:
+# { "plugin": "0x..." }
+
+# ---
+
+# Status de plugins alterado (ativado/desativado):
+# query GlobalPluginStatusChangedEvents($first: Int = 50) {
+#   protocolEvents(first: $first, eventType: "global_plugin_status_changed") {
+#     txHash
+#     block
+#     eventType
+#     address
+#     data
+#   }
+# }
+#
+# O campo "data" contem JSON com:
+# { "plugin": "0x...", "active": true }

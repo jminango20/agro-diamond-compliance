@@ -1,0 +1,22 @@
+# Eventos relacionados a identidade (bind, unbind, recovery)
+query IdentityEvents($first: Int = 50) {
+  protocolEvents(first: $first, eventType: "identity_bound") {
+    txHash
+    block
+    logIndex
+    eventType
+    address
+    data
+  }
+}
+
+# Exemplo 1 — Eventos de identity_bound:
+# {}
+#
+# Para outros tipos de eventos de identidade, altere eventType:
+#
+# Exemplo 2 — Eventos de identity_unbound:
+# Use eventType: "identity_unbound" na query
+#
+# Exemplo 3 — Eventos de wallet recovery:
+# Use eventType: "wallet_recovered" na query

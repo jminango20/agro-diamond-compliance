@@ -1,0 +1,42 @@
+# Busca todos os tipos de eventos de identidade de uma vez
+# (requer 3 chamadas separadas pois protocolEvents aceita apenas 1 eventType)
+
+# Identidades vinculadas
+query IdentityBoundEvents($first: Int = 20) {
+  protocolEvents(first: $first, eventType: "identity_bound") {
+    txHash
+    block
+    eventType
+    address
+    data
+  }
+}
+
+# Exemplo:
+# { "first": 50 }
+
+# ---
+
+# Identidades desvinculadas
+# query IdentityUnboundEvents($first: Int = 20) {
+#   protocolEvents(first: $first, eventType: "identity_unbound") {
+#     txHash
+#     block
+#     eventType
+#     address
+#     data
+#   }
+# }
+
+# ---
+
+# Wallets recuperadas
+# query WalletRecoveredEvents($first: Int = 20) {
+#   protocolEvents(first: $first, eventType: "wallet_recovered") {
+#     txHash
+#     block
+#     eventType
+#     address
+#     data
+#   }
+# }

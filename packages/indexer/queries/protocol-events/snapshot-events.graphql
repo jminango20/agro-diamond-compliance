@@ -1,0 +1,21 @@
+# Eventos de snapshots criados
+query SnapshotEvents($first: Int = 50, $tokenId: String) {
+  protocolEvents(first: $first, eventType: "snapshot_created", tokenId: $tokenId) {
+    txHash
+    block
+    logIndex
+    eventType
+    tokenId
+    address
+    data
+  }
+}
+
+# Exemplo 1 — Todos os snapshots:
+# {}
+#
+# Exemplo 2 — Snapshots do token 1:
+# { "tokenId": "1" }
+#
+# O campo "data" contem JSON com:
+# { "snapshotId": "1", "supply": "1000000", "timestamp": "1710000000" }

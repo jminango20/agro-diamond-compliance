@@ -1,0 +1,35 @@
+# Eventos de Asset Groups (grupos parent/child e mint fracionado)
+query GroupCreatedEvents($first: Int = 50) {
+  protocolEvents(first: $first, eventType: "group_created") {
+    txHash
+    block
+    logIndex
+    eventType
+    tokenId
+    address
+    data
+  }
+}
+
+# Exemplo 1 — Todos os grupos criados:
+# {}
+#
+# O campo "data" contem JSON com:
+# { "groupId": "1", "parentTokenId": "1", "name": "Group A", "maxUnits": "100" }
+
+# ---
+
+# Para buscar unidades mintadas, use eventType: "unit_minted":
+# query UnitMintedEvents($first: Int = 50) {
+#   protocolEvents(first: $first, eventType: "unit_minted") {
+#     txHash
+#     block
+#     eventType
+#     tokenId
+#     address
+#     data
+#   }
+# }
+#
+# O campo "data" contem JSON com:
+# { "groupId": "1", "childTokenId": "2", "name": "Unit 1", "amount": "10" }

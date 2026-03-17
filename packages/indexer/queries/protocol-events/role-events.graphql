@@ -1,0 +1,35 @@
+# Eventos de controle de acesso (roles concedidos e revogados)
+query RoleGrantedEvents($first: Int = 50) {
+  protocolEvents(first: $first, eventType: "role_granted") {
+    txHash
+    block
+    logIndex
+    eventType
+    address
+    data
+  }
+}
+
+# Exemplo 1 — Roles concedidos:
+# {}
+#
+# O campo "data" contem JSON com:
+# { "role": "0x...", "sender": "0x..." }
+#
+# Roles conhecidos (keccak256):
+# GOVERNANCE_ROLE, UPGRADER_ROLE, PAUSER_ROLE, ISSUER_ROLE,
+# COMPLIANCE_ADMIN_ROLE, TRANSFER_AGENT_ROLE, RECOVERY_AGENT_ROLE,
+# CLAIM_ISSUER_ROLE
+
+# ---
+
+# Para buscar roles revogados, use eventType: "role_revoked":
+# query RoleRevokedEvents($first: Int = 50) {
+#   protocolEvents(first: $first, eventType: "role_revoked") {
+#     txHash
+#     block
+#     eventType
+#     address
+#     data
+#   }
+# }

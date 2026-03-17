@@ -1,0 +1,56 @@
+# Eventos do CountryRestrictModule
+#
+# Emite:
+# CountryRestricted(uint256 indexed tokenId, uint16 indexed country)
+# CountryUnrestricted(uint256 indexed tokenId, uint16 indexed country)
+#
+# Modulo externo ao Diamond — requer EXTRA_ADDRESSES no indexer config
+# para que esses eventos sejam capturados.
+
+# Paises adicionados a blocklist
+query CountryRestrictedEvents($first: Int = 50, $tokenId: String) {
+  protocolEvents(first: $first, eventType: "country_restricted", tokenId: $tokenId) {
+    txHash
+    block
+    logIndex
+    eventType
+    tokenId
+    data
+  }
+}
+
+# Exemplo 1 — Todos os paises restritos:
+# {}
+#
+# Exemplo 2 — Paises restritos do token 1:
+# { "tokenId": "1" }
+#
+# O campo "data" contem JSON com:
+# { "country": 840 }
+# (840 = EUA, 826 = UK, etc.)
+
+# ---
+
+# Paises removidos da blocklist:
+# query CountryUnrestrictedEvents($first: Int = 50, $tokenId: String) {
+#   protocolEvents(first: $first, eventType: "country_unrestricted", tokenId: $tokenId) {
+#     txHash
+#     block
+#     eventType
+#     tokenId
+#     data
+#   }
+# }
+
+# ---
+
+# Codigos ISO 3166-1 numeric comuns:
+#   36 = Australia      40 = Austria
+#   56 = Belgica        76 = Brasil
+#  124 = Canada        156 = China
+#  250 = Franca        276 = Alemanha
+#  356 = India         380 = Italia
+#  392 = Japao         410 = Coreia do Sul
+#  528 = Holanda       620 = Portugal
+#  724 = Espanha       756 = Suica
+#  826 = Reino Unido   840 = EUA

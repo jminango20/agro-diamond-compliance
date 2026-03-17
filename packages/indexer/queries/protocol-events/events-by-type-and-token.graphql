@@ -1,0 +1,24 @@
+# Eventos filtrados por tipo E token ID (filtro combinado)
+query EventsByTypeAndToken($eventType: String!, $tokenId: String!, $first: Int = 50) {
+  protocolEvents(first: $first, eventType: $eventType, tokenId: $tokenId) {
+    txHash
+    block
+    logIndex
+    eventType
+    tokenId
+    address
+    data
+  }
+}
+
+# Exemplo 1 — Snapshots do token 1:
+# { "eventType": "snapshot_created", "tokenId": "1" }
+#
+# Exemplo 2 — Dividendos do token 2:
+# { "eventType": "dividend_created", "tokenId": "2" }
+#
+# Exemplo 3 — Freezes do token 5:
+# { "eventType": "asset_frozen", "tokenId": "5" }
+#
+# Exemplo 4 — Compliance changes do token 1 (ultimos 100):
+# { "eventType": "compliance_module_added", "tokenId": "1", "first": 100 }

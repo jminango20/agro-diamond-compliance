@@ -1,0 +1,30 @@
+# Resumo do protocolo: status + total de assets + identidades + freezes
+query ProtocolSummary {
+  status {
+    lastBlock
+    tokenCount
+  }
+  assets {
+    id
+    name
+    symbol
+    paused
+    totalSupply
+    holderCount
+  }
+  identities(first: 1) {
+    wallet
+  }
+  protocolEvents(first: 5) {
+    txHash
+    block
+    eventType
+    data
+  }
+}
+
+# Retorna um snapshot do estado atual do protocolo:
+# - Bloco mais recente indexado
+# - Lista de assets com status de pause e metricas
+# - Primeira identidade (para verificar se ha identidades)
+# - Ultimos 5 eventos para atividade recente

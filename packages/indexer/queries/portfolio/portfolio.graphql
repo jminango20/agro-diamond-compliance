@@ -1,0 +1,13 @@
+# Todas as holdings (tokens) de uma wallet
+query Portfolio($address: String!) {
+  portfolio(address: $address) {
+    tokenId
+    balance
+  }
+}
+
+# Exemplo 1 — Portfolio do deployer:
+# { "address": "0xB40061C7bf8394eb130Fcb5EA06868064593BFAa" }
+#
+# Exemplo 2 — Portfolio de outro holder:
+# { "address": "0x1234567890abcdef1234567890abcdef12345678" }

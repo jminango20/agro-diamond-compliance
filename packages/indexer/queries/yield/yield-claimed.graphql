@@ -1,0 +1,28 @@
+# Eventos de yield reivindicado por holders
+#
+# YieldDistributorModule emite:
+# YieldClaimed(uint256 indexed tokenId, bytes32 indexed rewardKey, address indexed holder, uint256 amount)
+
+query YieldClaimedEvents($first: Int = 50, $tokenId: String) {
+  protocolEvents(first: $first, eventType: "yield_claimed", tokenId: $tokenId) {
+    txHash
+    block
+    logIndex
+    eventType
+    tokenId
+    address
+    data
+  }
+}
+
+# Exemplo 1 — Todos os claims de yield:
+# {}
+#
+# Exemplo 2 — Claims de yield do token 1:
+# { "tokenId": "1" }
+#
+# Exemplo 3 — Claims de yield de uma wallet especifica:
+# (use events-by-address.graphql com eventType filtrado no cliente)
+#
+# O campo "data" contem JSON com:
+# { "rewardKey": "0x...", "holder": "0x...", "amount": "5000" }

@@ -1,0 +1,15 @@
+# Busca a identidade (ONCHAINID) vinculada a uma wallet
+query IdentityByWallet($wallet: String!) {
+  identity(wallet: $wallet) {
+    wallet
+    identity
+    country
+    boundAt
+  }
+}
+
+# Exemplo 1 — Buscar identidade do deployer:
+# { "wallet": "0xB40061C7bf8394eb130Fcb5EA06868064593BFAa" }
+#
+# Exemplo 2 — Buscar identidade de outro holder:
+# { "wallet": "0x1234567890abcdef1234567890abcdef12345678" }

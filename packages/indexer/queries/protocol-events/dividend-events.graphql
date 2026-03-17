@@ -1,0 +1,37 @@
+# Eventos de dividendos (criacao e reivindicacao)
+query DividendCreatedEvents($first: Int = 50, $tokenId: String) {
+  protocolEvents(first: $first, eventType: "dividend_created", tokenId: $tokenId) {
+    txHash
+    block
+    logIndex
+    eventType
+    tokenId
+    address
+    data
+  }
+}
+
+# Exemplo 1 — Todos os dividendos criados:
+# {}
+#
+# Exemplo 2 — Dividendos do token 1:
+# { "tokenId": "1" }
+#
+# O campo "data" contem JSON com:
+# { "dividendId": "1", "snapshotId": "1", "amount": "1000000", "paymentToken": "0x..." }
+
+# ---
+
+# Para buscar dividend claims, use eventType: "dividend_claimed":
+# query DividendClaimedEvents($first: Int = 50) {
+#   protocolEvents(first: $first, eventType: "dividend_claimed") {
+#     txHash
+#     block
+#     eventType
+#     address
+#     data
+#   }
+# }
+#
+# O campo "data" contem JSON com:
+# { "dividendId": "1", "amount": "5000" }

@@ -1,4 +1,4 @@
-# Busca um token específico por ID com holders e eventos recentes
+# Busca um token por ID com holders e eventos de transferencia
 query TokenById($id: String!) {
   token(id: $id) {
     id
@@ -20,5 +20,8 @@ query TokenById($id: String!) {
   }
 }
 
-# Variáveis:
+# Exemplo 1 — Token ID 1:
 # { "id": "1" }
+#
+# Exemplo 2 — Token ID 5:
+# { "id": "5" }

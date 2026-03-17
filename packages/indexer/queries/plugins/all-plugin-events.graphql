@@ -1,0 +1,37 @@
+# Todos os eventos de plugins (globais + per-asset) — busca multiplos tipos
+#
+# Tipos de evento de plugins:
+#
+# GlobalPluginFacet:
+# - global_plugin_registered   → novo plugin global registrado
+# - global_plugin_removed      → plugin global removido
+# - global_plugin_status_changed → plugin ativado/desativado
+#
+# AssetManagerFacet:
+# - plugin_module_added   → plugin hookable adicionado a um asset
+# - plugin_module_removed → plugin hookable removido de um asset
+# - plugin_modules_set    → plugins definidos em batch para um asset
+#
+# YieldDistributorModule:
+# - reward_asset_added    → novo reward asset registrado
+# - reward_asset_removed  → reward asset removido
+# - yield_deposited       → yield depositado para distribuicao
+# - yield_claimed         → holder reivindicou yield
+
+# Para buscar todos os eventos de plugins de uma vez, use sem filtro de eventType:
+query AllPluginEvents($first: Int = 100) {
+  protocolEvents(first: $first) {
+    txHash
+    block
+    logIndex
+    eventType
+    tokenId
+    address
+    data
+  }
+}
+
+# E filtre no cliente pelos eventTypes de plugins:
+# global_plugin_registered, global_plugin_removed, global_plugin_status_changed,
+# plugin_module_added, plugin_module_removed, plugin_modules_set,
+# reward_asset_added, reward_asset_removed, yield_deposited, yield_claimed

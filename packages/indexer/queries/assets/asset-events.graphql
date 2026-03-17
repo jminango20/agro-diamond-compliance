@@ -1,0 +1,41 @@
+# Eventos de protocolo de um asset, com filtro opcional por tipo
+query AssetEvents($id: String!, $eventType: String, $first: Int = 20) {
+  asset(id: $id) {
+    id
+    name
+    events(first: $first, eventType: $eventType) {
+      txHash
+      block
+      logIndex
+      eventType
+      tokenId
+      address
+      data
+    }
+  }
+}
+
+# Exemplo 1 — Todos os eventos do asset 1:
+# { "id": "1" }
+#
+# Exemplo 2 — Apenas eventos de freeze do asset 1:
+# { "id": "1", "eventType": "asset_frozen" }
+#
+# Exemplo 3 — Snapshots do asset 2 (ultimos 50):
+# { "id": "2", "eventType": "snapshot_created", "first": 50 }
+#
+# Exemplo 4 — Dividendos do asset 1:
+# { "id": "1", "eventType": "dividend_created" }
+#
+# Exemplo 5 — Compliance changes do asset 5:
+# { "id": "5", "eventType": "compliance_module_added" }
+#
+# Tipos de eventType possiveis para assets:
+# - asset_registered
+# - asset_config_updated
+# - uri_updated
+# - asset_frozen / asset_paused / asset_unpaused
+# - snapshot_created
+# - dividend_created / dividend_claimed
+# - compliance_module_added / compliance_module_removed
+# - group_created / unit_minted

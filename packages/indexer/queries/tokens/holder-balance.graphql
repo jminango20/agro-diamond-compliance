@@ -1,0 +1,13 @@
+# Balance de um holder especifico para um token
+query HolderBalance($tokenId: String!, $address: String!) {
+  holder(tokenId: $tokenId, address: $address) {
+    address
+    balance
+  }
+}
+
+# Exemplo 1 — Balance do deployer no token 1:
+# { "tokenId": "1", "address": "0xB40061C7bf8394eb130Fcb5EA06868064593BFAa" }
+#
+# Exemplo 2 — Balance de outro holder no token 3:
+# { "tokenId": "3", "address": "0x1234567890abcdef1234567890abcdef12345678" }
