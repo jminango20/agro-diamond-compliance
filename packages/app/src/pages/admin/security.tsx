@@ -5,6 +5,9 @@ import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 
 
 import { DIAMOND_ADDRESS, diamondAbi } from "@/config/contracts";
 import { useAssets } from "@/hooks/use-assets";
+import { useIndexerProtocolEvents, useIndexerFreezes } from "@/hooks/use-indexer";
+import { ActivityFeed } from "@/components/ui/activity-feed";
+import { truncateAddress } from "@/lib/format";
 
 const ROLES = [
   { label: "Issuer", value: keccak256(toHex("ISSUER_ROLE")) },
@@ -22,24 +25,26 @@ export default function SecurityPage() {
     functionName: "isProtocolPaused",
   });
 
+  // Indexer: security events + freeze lookup
+  const { data: securityEvents, isLoading: eventsLoading } = useIndexerProtocolEvents({ first: 20 });
+  const securityOnlyEvents = securityEvents?.filter((e) =>
+    ["wallet_frozen", "asset_frozen", "partial_freeze", "lockup_set", "role_granted", "role_revoked", "emergency_pause", "protocol_unpaused", "asset_paused", "asset_unpaused"].includes(e.eventType)
+  ) ?? [];
+
+  // Freeze lookup by wallet
+  const [lookupWallet, setLookupWallet] = useState("");
+  const [lookupTriggered, setLookupTriggered] = useState("");
+  const { data: freezeRecords, isLoading: freezeLoading } = useIndexerFreezes(lookupTriggered || undefined);
+
   // Protocol pause/unpause
   const { writeContract: writePause, data: pauseHash, isPending: pausePending } = useWriteContract();
   const { isSuccess: pauseSuccess } = useWaitForTransactionReceipt({ hash: pauseHash });
 
   const handleProtocolPause = () => {
-    writePause({
-      address: DIAMOND_ADDRESS,
-      abi: diamondAbi,
-      functionName: "pauseProtocol",
-    });
+    writePause({ address: DIAMOND_ADDRESS, abi: diamondAbi, functionName: "pauseProtocol" });
   };
-
   const handleProtocolUnpause = () => {
-    writePause({
-      address: DIAMOND_ADDRESS,
-      abi: diamondAbi,
-      functionName: "unpauseProtocol",
-    });
+    writePause({ address: DIAMOND_ADDRESS, abi: diamondAbi, functionName: "unpauseProtocol" });
   };
 
   // Per-asset pause
@@ -48,21 +53,10 @@ export default function SecurityPage() {
   const [pauseTokenId, setPauseTokenId] = useState("");
 
   const handlePauseAsset = () => {
-    writeAssetPause({
-      address: DIAMOND_ADDRESS,
-      abi: diamondAbi,
-      functionName: "pauseAsset",
-      args: [BigInt(pauseTokenId || "0")],
-    });
+    writeAssetPause({ address: DIAMOND_ADDRESS, abi: diamondAbi, functionName: "pauseAsset", args: [BigInt(pauseTokenId || "0")] });
   };
-
   const handleUnpauseAsset = () => {
-    writeAssetPause({
-      address: DIAMOND_ADDRESS,
-      abi: diamondAbi,
-      functionName: "unpauseAsset",
-      args: [BigInt(pauseTokenId || "0")],
-    });
+    writeAssetPause({ address: DIAMOND_ADDRESS, abi: diamondAbi, functionName: "unpauseAsset", args: [BigInt(pauseTokenId || "0")] });
   };
 
   // Emergency pause
@@ -70,11 +64,7 @@ export default function SecurityPage() {
   const { isSuccess: emergencySuccess } = useWaitForTransactionReceipt({ hash: emergencyHash });
 
   const handleEmergencyPause = () => {
-    writeEmergency({
-      address: DIAMOND_ADDRESS,
-      abi: diamondAbi,
-      functionName: "emergencyPause",
-    });
+    writeEmergency({ address: DIAMOND_ADDRESS, abi: diamondAbi, functionName: "emergencyPause" });
   };
 
   // Freeze wallet
@@ -84,12 +74,7 @@ export default function SecurityPage() {
   const [freezeValue, setFreezeValue] = useState(true);
 
   const handleSetWalletFrozen = () => {
-    writeFreeze({
-      address: DIAMOND_ADDRESS,
-      abi: diamondAbi,
-      functionName: "setWalletFrozen",
-      args: [freezeWallet as Address, freezeValue],
-    });
+    writeFreeze({ address: DIAMOND_ADDRESS, abi: diamondAbi, functionName: "setWalletFrozen", args: [freezeWallet as Address, freezeValue] });
   };
 
   // Per-asset wallet freeze
@@ -100,12 +85,7 @@ export default function SecurityPage() {
   const [assetFreezeValue, setAssetFreezeValue] = useState(true);
 
   const handleSetAssetWalletFrozen = () => {
-    writeAssetFreeze({
-      address: DIAMOND_ADDRESS,
-      abi: diamondAbi,
-      functionName: "setAssetWalletFrozen",
-      args: [BigInt(assetFreezeTokenId || "0"), assetFreezeWallet as Address, assetFreezeValue],
-    });
+    writeAssetFreeze({ address: DIAMOND_ADDRESS, abi: diamondAbi, functionName: "setAssetWalletFrozen", args: [BigInt(assetFreezeTokenId || "0"), assetFreezeWallet as Address, assetFreezeValue] });
   };
 
   // Set frozen amount
@@ -116,12 +96,7 @@ export default function SecurityPage() {
   const [frozenAmount, setFrozenAmount] = useState("");
 
   const handleSetFrozenAmount = () => {
-    writeFrozenAmount({
-      address: DIAMOND_ADDRESS,
-      abi: diamondAbi,
-      functionName: "setFrozenTokens",
-      args: [BigInt(frozenTokenId || "0"), frozenWallet as Address, BigInt(frozenAmount || "0")],
-    });
+    writeFrozenAmount({ address: DIAMOND_ADDRESS, abi: diamondAbi, functionName: "setFrozenTokens", args: [BigInt(frozenTokenId || "0"), frozenWallet as Address, BigInt(frozenAmount || "0")] });
   };
 
   // Role management
@@ -131,318 +106,287 @@ export default function SecurityPage() {
   const [selectedRole, setSelectedRole] = useState(ROLES[0].value);
 
   const handleGrantRole = () => {
-    writeRole({
-      address: DIAMOND_ADDRESS,
-      abi: diamondAbi,
-      functionName: "grantRole",
-      args: [selectedRole, roleAddress as Address],
-    });
+    writeRole({ address: DIAMOND_ADDRESS, abi: diamondAbi, functionName: "grantRole", args: [selectedRole, roleAddress as Address] });
+  };
+  const handleRevokeRole = () => {
+    writeRole({ address: DIAMOND_ADDRESS, abi: diamondAbi, functionName: "revokeRole", args: [selectedRole, roleAddress as Address] });
   };
 
-  const handleRevokeRole = () => {
-    writeRole({
-      address: DIAMOND_ADDRESS,
-      abi: diamondAbi,
-      functionName: "revokeRole",
-      args: [selectedRole, roleAddress as Address],
-    });
-  };
+  const inputClass = "w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-indigo-400 focus:outline-none";
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] p-8">
       <h1 className="mb-8 text-3xl font-bold text-white">Security Management</h1>
 
-      {/* Protocol Pause */}
-      <div className="mb-6 rounded-xl bg-white/5 border border-white/10 p-6">
-        <h2 className="mb-4 text-xl font-semibold text-indigo-400">Protocol Pause</h2>
-        <div className="flex items-center gap-4">
-          <p className="text-gray-300">
-            Current status:{" "}
-            <span className={isProtocolPaused ? "font-semibold text-red-400" : "font-semibold text-green-400"}>
-              {isProtocolPaused ? "Paused" : "Active"}
-            </span>
-          </p>
-          <button
-            onClick={isProtocolPaused ? handleProtocolUnpause : handleProtocolPause}
-            disabled={pausePending}
-            className={`rounded-lg px-6 py-2 font-medium text-white transition-colors disabled:opacity-50 ${
-              isProtocolPaused
-                ? "bg-green-500 hover:bg-green-600"
-                : "bg-red-500 hover:bg-red-600"
-            }`}
-          >
-            {pausePending ? "Processing..." : isProtocolPaused ? "Unpause Protocol" : "Pause Protocol"}
-          </button>
-        </div>
-        {pauseSuccess && <p className="mt-2 text-sm text-green-400">Protocol pause state updated!</p>}
-      </div>
-
-      {/* Emergency Pause */}
-      <div className="mb-6 rounded-xl bg-white/5 border border-red-500/30 p-6">
-        <h2 className="mb-4 text-xl font-semibold text-red-400">Emergency Pause</h2>
-        <p className="mb-4 text-sm text-gray-400">
-          This will immediately pause all protocol operations. Use only in emergencies.
-        </p>
-        <button
-          onClick={handleEmergencyPause}
-          disabled={emergencyPending}
-          className="rounded-lg bg-red-600 px-6 py-2 font-bold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
-        >
-          {emergencyPending ? "Pausing..." : "EMERGENCY PAUSE"}
-        </button>
-        {emergencySuccess && <p className="mt-2 text-sm text-green-400">Emergency pause activated!</p>}
-      </div>
-
-      {/* Per-Asset Pause */}
-      <div className="mb-6 rounded-xl bg-white/5 border border-white/10 p-6">
-        <h2 className="mb-4 text-xl font-semibold text-indigo-400">Per-Asset Pause</h2>
-        <div className="flex items-end gap-2">
-          <div className="flex-1">
-            <label className="mb-1 block text-sm text-gray-400">Token ID</label>
-            <input
-              type="text"
-              value={pauseTokenId}
-              onChange={(e) => setPauseTokenId(e.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-indigo-400 focus:outline-none"
-              placeholder="0"
-            />
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        {/* Main controls (2/3) */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Protocol Pause */}
+          <div className="rounded-xl bg-white/5 border border-white/10 p-6">
+            <h2 className="mb-4 text-xl font-semibold text-indigo-400">Protocol Pause</h2>
+            <div className="flex items-center gap-4">
+              <p className="text-gray-300">
+                Current status:{" "}
+                <span className={isProtocolPaused ? "font-semibold text-red-400" : "font-semibold text-green-400"}>
+                  {isProtocolPaused ? "Paused" : "Active"}
+                </span>
+              </p>
+              <button
+                onClick={isProtocolPaused ? handleProtocolUnpause : handleProtocolPause}
+                disabled={pausePending}
+                className={`rounded-lg px-6 py-2 font-medium text-white transition-colors disabled:opacity-50 ${
+                  isProtocolPaused ? "bg-green-500 hover:bg-green-600" : "bg-red-500 hover:bg-red-600"
+                }`}
+              >
+                {pausePending ? "Processing..." : isProtocolPaused ? "Unpause Protocol" : "Pause Protocol"}
+              </button>
+            </div>
+            {pauseSuccess && <p className="mt-2 text-sm text-green-400">Protocol pause state updated!</p>}
           </div>
-          <button
-            onClick={handlePauseAsset}
-            disabled={assetPausePending}
-            className="rounded-lg bg-red-500 px-4 py-2 font-medium text-white transition-colors hover:bg-red-600 disabled:opacity-50"
-          >
-            Pause
-          </button>
-          <button
-            onClick={handleUnpauseAsset}
-            disabled={assetPausePending}
-            className="rounded-lg bg-green-500 px-4 py-2 font-medium text-white transition-colors hover:bg-green-600 disabled:opacity-50"
-          >
-            Unpause
-          </button>
-        </div>
-        {assetPauseSuccess && <p className="mt-2 text-sm text-green-400">Asset pause state updated!</p>}
 
-        {!assetsLoading && assets.length > 0 && (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full text-left text-sm text-gray-300">
-              <thead>
-                <tr className="border-b border-white/10 text-gray-400">
-                  <th className="pb-3 pr-4">Token ID</th>
-                  <th className="pb-3 pr-4">Name</th>
-                  <th className="pb-3">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/10">
-                {assets.map((a) => (
-                  <tr key={a.tokenId.toString()}>
-                    <td className="py-3 pr-4 font-mono">{a.tokenId.toString()}</td>
-                    <td className="py-3 pr-4">{a.name}</td>
-                    <td className="py-3">
-                      <span className={a.paused ? "text-red-400" : "text-green-400"}>
-                        {a.paused ? "Paused" : "Active"}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* Freeze Wallet (Global) */}
-      <div className="mb-6 rounded-xl bg-white/5 border border-white/10 p-6">
-        <h2 className="mb-4 text-xl font-semibold text-indigo-400">Freeze Wallet (Global)</h2>
-        <div className="flex items-end gap-2">
-          <div className="flex-1">
-            <label className="mb-1 block text-sm text-gray-400">Wallet Address</label>
-            <input
-              type="text"
-              value={freezeWallet}
-              onChange={(e) => setFreezeWallet(e.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-indigo-400 focus:outline-none"
-              placeholder="0x..."
-            />
-          </div>
-          <select
-            value={freezeValue ? "freeze" : "unfreeze"}
-            onChange={(e) => setFreezeValue(e.target.value === "freeze")}
-            className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white focus:border-indigo-400 focus:outline-none"
-          >
-            <option value="freeze">Freeze</option>
-            <option value="unfreeze">Unfreeze</option>
-          </select>
-          <button
-            onClick={handleSetWalletFrozen}
-            disabled={freezePending}
-            className="rounded-lg bg-indigo-500 px-6 py-2 font-medium text-white transition-colors hover:bg-indigo-600 disabled:opacity-50"
-          >
-            {freezePending ? "Processing..." : "Submit"}
-          </button>
-        </div>
-        {freezeSuccess && <p className="mt-2 text-sm text-green-400">Wallet freeze state updated!</p>}
-      </div>
-
-      {/* Freeze Wallet Per-Asset */}
-      <div className="mb-6 rounded-xl bg-white/5 border border-white/10 p-6">
-        <h2 className="mb-4 text-xl font-semibold text-indigo-400">Freeze Wallet (Per-Asset)</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div>
-            <label className="mb-1 block text-sm text-gray-400">Token ID</label>
-            <input
-              type="text"
-              value={assetFreezeTokenId}
-              onChange={(e) => setAssetFreezeTokenId(e.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-indigo-400 focus:outline-none"
-              placeholder="0"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm text-gray-400">Wallet Address</label>
-            <input
-              type="text"
-              value={assetFreezeWallet}
-              onChange={(e) => setAssetFreezeWallet(e.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-indigo-400 focus:outline-none"
-              placeholder="0x..."
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm text-gray-400">Action</label>
-            <select
-              value={assetFreezeValue ? "freeze" : "unfreeze"}
-              onChange={(e) => setAssetFreezeValue(e.target.value === "freeze")}
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white focus:border-indigo-400 focus:outline-none"
+          {/* Emergency Pause */}
+          <div className="rounded-xl bg-white/5 border border-red-500/30 p-6">
+            <h2 className="mb-4 text-xl font-semibold text-red-400">Emergency Pause</h2>
+            <p className="mb-4 text-sm text-gray-400">
+              This will immediately pause all protocol operations. Use only in emergencies.
+            </p>
+            <button
+              onClick={handleEmergencyPause}
+              disabled={emergencyPending}
+              className="rounded-lg bg-red-600 px-6 py-2 font-bold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
             >
-              <option value="freeze">Freeze</option>
-              <option value="unfreeze">Unfreeze</option>
-            </select>
+              {emergencyPending ? "Pausing..." : "EMERGENCY PAUSE"}
+            </button>
+            {emergencySuccess && <p className="mt-2 text-sm text-green-400">Emergency pause activated!</p>}
           </div>
-        </div>
-        <button
-          onClick={handleSetAssetWalletFrozen}
-          disabled={assetFreezePending}
-          className="mt-4 rounded-lg bg-indigo-500 px-6 py-2 font-medium text-white transition-colors hover:bg-indigo-600 disabled:opacity-50"
-        >
-          {assetFreezePending ? "Processing..." : "Submit"}
-        </button>
-        {assetFreezeSuccess && <p className="mt-2 text-sm text-green-400">Asset wallet freeze state updated!</p>}
-      </div>
 
-      {/* Set Frozen Amount */}
-      <div className="mb-6 rounded-xl bg-white/5 border border-white/10 p-6">
-        <h2 className="mb-4 text-xl font-semibold text-indigo-400">Set Frozen Token Amount</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div>
-            <label className="mb-1 block text-sm text-gray-400">Token ID</label>
-            <input
-              type="text"
-              value={frozenTokenId}
-              onChange={(e) => setFrozenTokenId(e.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-indigo-400 focus:outline-none"
-              placeholder="0"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm text-gray-400">Wallet Address</label>
-            <input
-              type="text"
-              value={frozenWallet}
-              onChange={(e) => setFrozenWallet(e.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-indigo-400 focus:outline-none"
-              placeholder="0x..."
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm text-gray-400">Frozen Amount</label>
-            <input
-              type="text"
-              value={frozenAmount}
-              onChange={(e) => setFrozenAmount(e.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-indigo-400 focus:outline-none"
-              placeholder="500"
-            />
-          </div>
-        </div>
-        <button
-          onClick={handleSetFrozenAmount}
-          disabled={frozenAmountPending}
-          className="mt-4 rounded-lg bg-indigo-500 px-6 py-2 font-medium text-white transition-colors hover:bg-indigo-600 disabled:opacity-50"
-        >
-          {frozenAmountPending ? "Setting..." : "Set Frozen Amount"}
-        </button>
-        {frozenAmountSuccess && <p className="mt-2 text-sm text-green-400">Frozen amount updated!</p>}
-      </div>
+          {/* Per-Asset Pause */}
+          <div className="rounded-xl bg-white/5 border border-white/10 p-6">
+            <h2 className="mb-4 text-xl font-semibold text-indigo-400">Per-Asset Pause</h2>
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <label className="mb-1 block text-sm text-gray-400">Token ID</label>
+                <input type="text" value={pauseTokenId} onChange={(e) => setPauseTokenId(e.target.value)} className={inputClass} placeholder="0" />
+              </div>
+              <button onClick={handlePauseAsset} disabled={assetPausePending} className="rounded-lg bg-red-500 px-4 py-2 font-medium text-white transition-colors hover:bg-red-600 disabled:opacity-50">Pause</button>
+              <button onClick={handleUnpauseAsset} disabled={assetPausePending} className="rounded-lg bg-green-500 px-4 py-2 font-medium text-white transition-colors hover:bg-green-600 disabled:opacity-50">Unpause</button>
+            </div>
+            {assetPauseSuccess && <p className="mt-2 text-sm text-green-400">Asset pause state updated!</p>}
 
-      {/* Role Management */}
-      <div className="rounded-xl bg-white/5 border border-white/10 p-6">
-        <h2 className="mb-4 text-xl font-semibold text-indigo-400">Role Management</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-sm text-gray-400">Wallet Address</label>
-            <input
-              type="text"
-              value={roleAddress}
-              onChange={(e) => setRoleAddress(e.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-indigo-400 focus:outline-none"
-              placeholder="0x..."
-            />
+            {!assetsLoading && assets.length > 0 && (
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full text-left text-sm text-gray-300">
+                  <thead>
+                    <tr className="border-b border-white/10 text-gray-400">
+                      <th className="pb-3 pr-4">Token ID</th>
+                      <th className="pb-3 pr-4">Name</th>
+                      <th className="pb-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/10">
+                    {assets.map((a) => (
+                      <tr key={a.tokenId.toString()}>
+                        <td className="py-3 pr-4 font-mono">{a.tokenId.toString()}</td>
+                        <td className="py-3 pr-4">{a.name}</td>
+                        <td className="py-3">
+                          <span className={a.paused ? "text-red-400" : "text-green-400"}>
+                            {a.paused ? "Paused" : "Active"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-          <div>
-            <label className="mb-1 block text-sm text-gray-400">Role</label>
-            <select
-              value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value as `0x${string}`)}
-              className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white focus:border-indigo-400 focus:outline-none"
-            >
-              {ROLES.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <div className="mt-4 flex gap-2">
-          <button
-            onClick={handleGrantRole}
-            disabled={rolePending}
-            className="rounded-lg bg-indigo-500 px-6 py-2 font-medium text-white transition-colors hover:bg-indigo-600 disabled:opacity-50"
-          >
-            {rolePending ? "Processing..." : "Grant Role"}
-          </button>
-          <button
-            onClick={handleRevokeRole}
-            disabled={rolePending}
-            className="rounded-lg bg-red-500 px-6 py-2 font-medium text-white transition-colors hover:bg-red-600 disabled:opacity-50"
-          >
-            {rolePending ? "Processing..." : "Revoke Role"}
-          </button>
-        </div>
-        {roleSuccess && <p className="mt-2 text-sm text-green-400">Role updated!</p>}
 
-        <div className="mt-6">
-          <h3 className="mb-2 text-sm font-medium text-gray-400">Role Reference</h3>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-gray-300">
-              <thead>
-                <tr className="border-b border-white/10 text-gray-400">
-                  <th className="pb-2 pr-4">Role</th>
-                  <th className="pb-2">Bytes32 Hash</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/10">
-                {ROLES.map((r) => (
-                  <tr key={r.value}>
-                    <td className="py-2 pr-4">{r.label}</td>
-                    <td className="py-2 font-mono text-xs text-gray-500">{r.value}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          {/* Freeze Wallet (Global) */}
+          <div className="rounded-xl bg-white/5 border border-white/10 p-6">
+            <h2 className="mb-4 text-xl font-semibold text-indigo-400">Freeze Wallet (Global)</h2>
+            <div className="flex items-end gap-2">
+              <div className="flex-1">
+                <label className="mb-1 block text-sm text-gray-400">Wallet Address</label>
+                <input type="text" value={freezeWallet} onChange={(e) => setFreezeWallet(e.target.value)} className={inputClass} placeholder="0x..." />
+              </div>
+              <select
+                value={freezeValue ? "freeze" : "unfreeze"}
+                onChange={(e) => setFreezeValue(e.target.value === "freeze")}
+                className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white focus:border-indigo-400 focus:outline-none"
+              >
+                <option value="freeze">Freeze</option>
+                <option value="unfreeze">Unfreeze</option>
+              </select>
+              <button onClick={handleSetWalletFrozen} disabled={freezePending} className="rounded-lg bg-indigo-500 px-6 py-2 font-medium text-white transition-colors hover:bg-indigo-600 disabled:opacity-50">
+                {freezePending ? "Processing..." : "Submit"}
+              </button>
+            </div>
+            {freezeSuccess && <p className="mt-2 text-sm text-green-400">Wallet freeze state updated!</p>}
           </div>
+
+          {/* Freeze Wallet Per-Asset */}
+          <div className="rounded-xl bg-white/5 border border-white/10 p-6">
+            <h2 className="mb-4 text-xl font-semibold text-indigo-400">Freeze Wallet (Per-Asset)</h2>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div>
+                <label className="mb-1 block text-sm text-gray-400">Token ID</label>
+                <input type="text" value={assetFreezeTokenId} onChange={(e) => setAssetFreezeTokenId(e.target.value)} className={inputClass} placeholder="0" />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm text-gray-400">Wallet Address</label>
+                <input type="text" value={assetFreezeWallet} onChange={(e) => setAssetFreezeWallet(e.target.value)} className={inputClass} placeholder="0x..." />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm text-gray-400">Action</label>
+                <select
+                  value={assetFreezeValue ? "freeze" : "unfreeze"}
+                  onChange={(e) => setAssetFreezeValue(e.target.value === "freeze")}
+                  className={inputClass}
+                >
+                  <option value="freeze">Freeze</option>
+                  <option value="unfreeze">Unfreeze</option>
+                </select>
+              </div>
+            </div>
+            <button onClick={handleSetAssetWalletFrozen} disabled={assetFreezePending} className="mt-4 rounded-lg bg-indigo-500 px-6 py-2 font-medium text-white transition-colors hover:bg-indigo-600 disabled:opacity-50">
+              {assetFreezePending ? "Processing..." : "Submit"}
+            </button>
+            {assetFreezeSuccess && <p className="mt-2 text-sm text-green-400">Asset wallet freeze state updated!</p>}
+          </div>
+
+          {/* Set Frozen Amount */}
+          <div className="rounded-xl bg-white/5 border border-white/10 p-6">
+            <h2 className="mb-4 text-xl font-semibold text-indigo-400">Set Frozen Token Amount</h2>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <div>
+                <label className="mb-1 block text-sm text-gray-400">Token ID</label>
+                <input type="text" value={frozenTokenId} onChange={(e) => setFrozenTokenId(e.target.value)} className={inputClass} placeholder="0" />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm text-gray-400">Wallet Address</label>
+                <input type="text" value={frozenWallet} onChange={(e) => setFrozenWallet(e.target.value)} className={inputClass} placeholder="0x..." />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm text-gray-400">Frozen Amount</label>
+                <input type="text" value={frozenAmount} onChange={(e) => setFrozenAmount(e.target.value)} className={inputClass} placeholder="500" />
+              </div>
+            </div>
+            <button onClick={handleSetFrozenAmount} disabled={frozenAmountPending} className="mt-4 rounded-lg bg-indigo-500 px-6 py-2 font-medium text-white transition-colors hover:bg-indigo-600 disabled:opacity-50">
+              {frozenAmountPending ? "Setting..." : "Set Frozen Amount"}
+            </button>
+            {frozenAmountSuccess && <p className="mt-2 text-sm text-green-400">Frozen amount updated!</p>}
+          </div>
+
+          {/* Role Management */}
+          <div className="rounded-xl bg-white/5 border border-white/10 p-6">
+            <h2 className="mb-4 text-xl font-semibold text-indigo-400">Role Management</h2>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-sm text-gray-400">Wallet Address</label>
+                <input type="text" value={roleAddress} onChange={(e) => setRoleAddress(e.target.value)} className={inputClass} placeholder="0x..." />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm text-gray-400">Role</label>
+                <select value={selectedRole} onChange={(e) => setSelectedRole(e.target.value as `0x${string}`)} className={inputClass}>
+                  {ROLES.map((r) => (
+                    <option key={r.value} value={r.value}>{r.label}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="mt-4 flex gap-2">
+              <button onClick={handleGrantRole} disabled={rolePending} className="rounded-lg bg-indigo-500 px-6 py-2 font-medium text-white transition-colors hover:bg-indigo-600 disabled:opacity-50">
+                {rolePending ? "Processing..." : "Grant Role"}
+              </button>
+              <button onClick={handleRevokeRole} disabled={rolePending} className="rounded-lg bg-red-500 px-6 py-2 font-medium text-white transition-colors hover:bg-red-600 disabled:opacity-50">
+                {rolePending ? "Processing..." : "Revoke Role"}
+              </button>
+            </div>
+            {roleSuccess && <p className="mt-2 text-sm text-green-400">Role updated!</p>}
+
+            <div className="mt-6">
+              <h3 className="mb-2 text-sm font-medium text-gray-400">Role Reference</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm text-gray-300">
+                  <thead>
+                    <tr className="border-b border-white/10 text-gray-400">
+                      <th className="pb-2 pr-4">Role</th>
+                      <th className="pb-2">Bytes32 Hash</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/10">
+                    {ROLES.map((r) => (
+                      <tr key={r.value}>
+                        <td className="py-2 pr-4">{r.label}</td>
+                        <td className="py-2 font-mono text-xs text-gray-500">{r.value}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Sidebar: freeze lookup + security events (1/3) */}
+        <div className="space-y-6">
+          {/* Freeze Lookup */}
+          <div className="rounded-xl bg-white/5 border border-white/10 p-6">
+            <h3 className="text-lg font-semibold text-white mb-4">Freeze Lookup</h3>
+            <div className="flex gap-2 mb-4">
+              <input
+                type="text"
+                value={lookupWallet}
+                onChange={(e) => setLookupWallet(e.target.value)}
+                className={`${inputClass} text-sm`}
+                placeholder="Wallet address..."
+              />
+              <button
+                onClick={() => setLookupTriggered(lookupWallet)}
+                className="shrink-0 rounded-lg bg-indigo-500 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-600"
+              >
+                Search
+              </button>
+            </div>
+            {lookupTriggered && (
+              freezeLoading ? (
+                <p className="text-sm text-gray-500">Loading...</p>
+              ) : freezeRecords && freezeRecords.length > 0 ? (
+                <div className="space-y-2">
+                  {freezeRecords.map((f, i) => (
+                    <div key={i} className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-gray-400">
+                          {f.tokenId ? `Token #${f.tokenId}` : "Global"}
+                        </span>
+                        <span className={`text-xs font-semibold ${f.frozen ? "text-blue-400" : "text-green-400"}`}>
+                          {f.frozen ? "Frozen" : "Not Frozen"}
+                        </span>
+                      </div>
+                      {f.frozenAmount && (
+                        <p className="text-xs text-gray-500">Amount: {f.frozenAmount}</p>
+                      )}
+                      {f.lockupExpiry != null && f.lockupExpiry > 0 && (
+                        <p className="text-xs text-gray-500">
+                          Lockup: {new Date(f.lockupExpiry * 1000).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">No freeze records for this wallet.</p>
+              )
+            )}
+          </div>
+
+          {/* Security Events */}
+          <ActivityFeed
+            events={securityOnlyEvents}
+            isLoading={eventsLoading}
+            title="Security Events"
+            compact
+          />
         </div>
       </div>
     </div>

@@ -5,6 +5,12 @@ import { useReadContract } from "wagmi";
 import { DIAMOND_ADDRESS, diamondAbi } from "@/config/contracts";
 import { useAssets } from "@/hooks/use-assets";
 import { useRole } from "@/hooks/use-role";
+import {
+  useIndexerStatus,
+  useIndexerProtocolEvents,
+  useIndexerTokens,
+} from "@/hooks/use-indexer";
+import { ActivityFeed } from "@/components/ui/activity-feed";
 
 const quickActions = [
   { title: "Asset Management", description: "Register and manage tokenized assets", href: "/admin/assets" },
@@ -12,6 +18,7 @@ const quickActions = [
   { title: "Compliance", description: "Claim topics, trusted issuers, modules", href: "/admin/compliance" },
   { title: "Supply Management", description: "Mint, burn, and forced transfers", href: "/admin/supply" },
   { title: "Security", description: "Pause, freeze, and role management", href: "/admin/security" },
+  { title: "Asset Groups", description: "Hierarchical asset fractionalization", href: "/admin/groups" },
   { title: "Diamond Info", description: "Facets, selectors, and interfaces", href: "/admin/diamond" },
   { title: "Snapshots & Dividends", description: "Create snapshots and distribute dividends", href: "/admin/snapshots" },
 ];
@@ -32,12 +39,17 @@ export default function AdminDashboardPage() {
     functionName: "isProtocolPaused",
   });
 
-  const [indexerStatus, setIndexerStatus] = useState<"healthy" | "down" | "loading">("loading");
+  // Indexer data
+  const { data: indexerStatus } = useIndexerStatus();
+  const { data: indexerTokens } = useIndexerTokens();
+  const { data: recentEvents, isLoading: eventsLoading } = useIndexerProtocolEvents({ first: 15 });
+
+  const [indexerHealth, setIndexerHealth] = useState<"healthy" | "down" | "loading">("loading");
 
   useEffect(() => {
     const url = import.meta.env.VITE_INDEXER_URL;
     if (!url) {
-      setIndexerStatus("down");
+      setIndexerHealth("down");
       return;
     }
     const controller = new AbortController();
@@ -45,21 +57,24 @@ export default function AdminDashboardPage() {
     fetch(`${url}/health`, { signal: controller.signal })
       .then((res) => {
         clearTimeout(timeout);
-        setIndexerStatus(res.ok ? "healthy" : "down");
+        setIndexerHealth(res.ok ? "healthy" : "down");
       })
       .catch(() => {
         clearTimeout(timeout);
-        setIndexerStatus("down");
+        setIndexerHealth("down");
       });
     return () => { clearTimeout(timeout); controller.abort(); };
   }, []);
+
+  // Compute total holders across all tokens
+  const totalHolders = indexerTokens?.reduce((sum, t) => sum + t.holderCount, 0) ?? 0;
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] p-8">
       <h1 className="mb-8 text-3xl font-bold text-white">Admin Dashboard</h1>
 
       {/* Protocol Status Cards */}
-      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6">
         <div className="rounded-xl bg-white/5 border border-white/10 p-6">
           <p className="text-sm text-gray-400">Protocol Status</p>
           {pauseLoading ? (
@@ -81,6 +96,11 @@ export default function AdminDashboardPage() {
         </div>
 
         <div className="rounded-xl bg-white/5 border border-white/10 p-6">
+          <p className="text-sm text-gray-400">Total Holders</p>
+          <p className="mt-1 text-lg font-semibold text-indigo-400">{totalHolders}</p>
+        </div>
+
+        <div className="rounded-xl bg-white/5 border border-white/10 p-6">
           <p className="text-sm text-gray-400">Owner</p>
           {ownerLoading ? (
             <p className="mt-1 text-lg text-gray-500">Loading...</p>
@@ -95,29 +115,51 @@ export default function AdminDashboardPage() {
           <p className="text-sm text-gray-400">Indexer</p>
           <p
             className={`mt-1 text-lg font-semibold ${
-              indexerStatus === "healthy"
+              indexerHealth === "healthy"
                 ? "text-green-400"
-                : indexerStatus === "down"
+                : indexerHealth === "down"
                   ? "text-red-400"
                   : "text-gray-500"
             }`}
           >
-            {indexerStatus === "loading" ? "Checking..." : indexerStatus === "healthy" ? "Healthy" : "Unreachable"}
+            {indexerHealth === "loading" ? "Checking..." : indexerHealth === "healthy" ? "Healthy" : "Unreachable"}
+          </p>
+        </div>
+
+        <div className="rounded-xl bg-white/5 border border-white/10 p-6">
+          <p className="text-sm text-gray-400">Last Indexed Block</p>
+          <p className="mt-1 text-lg font-semibold text-indigo-400 font-mono">
+            {indexerStatus ? indexerStatus.lastBlock.toLocaleString() : "-"}
           </p>
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <h2 className="mb-4 text-xl font-semibold text-white">Quick Actions</h2>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {quickActions.map((action) => (
-          <Link key={action.href} to={action.href}>
-            <div className="rounded-xl bg-white/5 border border-white/10 p-6 transition-colors hover:border-indigo-400/50 hover:bg-white/[0.08]">
-              <h3 className="text-lg font-semibold text-indigo-400">{action.title}</h3>
-              <p className="mt-1 text-sm text-gray-400">{action.description}</p>
-            </div>
-          </Link>
-        ))}
+      {/* Main content: Quick Actions + Activity Feed */}
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        {/* Quick Actions */}
+        <div className="lg:col-span-2">
+          <h2 className="mb-4 text-xl font-semibold text-white">Quick Actions</h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {quickActions.map((action) => (
+              <Link key={action.href} to={action.href}>
+                <div className="rounded-xl bg-white/5 border border-white/10 p-6 transition-colors hover:border-indigo-400/50 hover:bg-white/[0.08]">
+                  <h3 className="text-lg font-semibold text-indigo-400">{action.title}</h3>
+                  <p className="mt-1 text-sm text-gray-400">{action.description}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Activity Feed */}
+        <div>
+          <ActivityFeed
+            events={recentEvents ?? []}
+            isLoading={eventsLoading}
+            title="Recent Protocol Activity"
+            compact
+          />
+        </div>
       </div>
     </div>
   );

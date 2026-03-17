@@ -4,6 +4,8 @@ import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 
 
 import { DIAMOND_ADDRESS, diamondAbi } from "@/config/contracts";
 import { useAssets } from "@/hooks/use-assets";
+import { useIndexerProtocolEvents } from "@/hooks/use-indexer";
+import { ActivityFeed } from "@/components/ui/activity-feed";
 
 export default function SnapshotsPage() {
   const { assets, isLoading: assetsLoading } = useAssets();
@@ -63,6 +65,12 @@ export default function SnapshotsPage() {
     args: viewDivTokenId ? [BigInt(viewDivTokenId)] : undefined,
     query: { enabled: !!viewDivTokenId },
   });
+
+  // Indexer: snapshot + dividend events
+  const { data: sdEvents, isLoading: sdEventsLoading } = useIndexerProtocolEvents({ first: 20 });
+  const filteredSDEvents = sdEvents?.filter((e) =>
+    ["snapshot_created", "dividend_created", "dividend_claimed"].includes(e.eventType)
+  ) ?? [];
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] p-8">
@@ -192,7 +200,7 @@ export default function SnapshotsPage() {
       </div>
 
       {/* View Dividends */}
-      <div className="rounded-xl bg-white/5 border border-white/10 p-6">
+      <div className="mb-6 rounded-xl bg-white/5 border border-white/10 p-6">
         <h2 className="mb-4 text-xl font-semibold text-indigo-400">View Dividends</h2>
         <div className="flex gap-2">
           <select
@@ -224,6 +232,13 @@ export default function SnapshotsPage() {
           </div>
         )}
       </div>
+
+      {/* Snapshot & Dividend Event History */}
+      <ActivityFeed
+        events={filteredSDEvents}
+        isLoading={sdEventsLoading}
+        title="Snapshot & Dividend History"
+      />
     </div>
   );
 }

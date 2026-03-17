@@ -13,6 +13,9 @@ import {
 import { DIAMOND_ADDRESS, diamondAbi } from "@/config/contracts";
 import { COMPLIANCE_MODULES } from "@/config/compliance-modules";
 import { useTokenInfo } from "@/hooks/use-token-info";
+import { useIndexerToken, useIndexerProtocolEvents } from "@/hooks/use-indexer";
+import { ActivityFeed } from "@/components/ui/activity-feed";
+import { truncateAddress } from "@/lib/format";
 
 const EXPLORER = "https://amoy.polygonscan.com";
 
@@ -146,6 +149,13 @@ export default function AssetDetailPage() {
     writeCountries({ address: DIAMOND_ADDRESS, abi: diamondAbi, functionName: "setAllowedCountries", args: [tokenId, list] });
   };
 
+  // Indexer data: holders + asset events
+  const { data: indexerToken } = useIndexerToken(tokenIdParam);
+  const { data: assetEvents, isLoading: eventsLoading } = useIndexerProtocolEvents({
+    first: 15,
+    tokenId: tokenIdParam,
+  });
+
   const inputClass = "w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white placeholder-gray-500 focus:border-indigo-400 focus:outline-none";
 
   if (isLoading) {
@@ -269,6 +279,57 @@ export default function AssetDetailPage() {
           <p className="text-xs font-medium text-gray-500 mb-2">Metadata URI</p>
           <p className="font-mono text-xs text-gray-400 break-all">{uri || "Not set"}</p>
         </div>
+      </div>
+
+      {/* ═══════════════ HOLDERS & EVENTS ═══════════════ */}
+      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* Holders Table */}
+        <div className="rounded-xl bg-white/5 border border-white/10 p-6">
+          <h2 className="mb-4 text-lg font-semibold text-indigo-400">
+            Holders
+            {indexerToken && <span className="ml-2 text-sm text-gray-500">({indexerToken.holders.length})</span>}
+          </h2>
+          {indexerToken && indexerToken.holders.length > 0 ? (
+            <div className="overflow-x-auto max-h-64 overflow-y-auto">
+              <table className="w-full text-left text-sm text-gray-300">
+                <thead className="sticky top-0 bg-[#0a0a0f]">
+                  <tr className="border-b border-white/10 text-gray-400">
+                    <th className="pb-2 pr-4">Address</th>
+                    <th className="pb-2 text-right">Balance</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/10">
+                  {indexerToken.holders.map((h) => (
+                    <tr key={h.address} className="hover:bg-white/[0.03]">
+                      <td className="py-2 pr-4">
+                        <a
+                          href={`${EXPLORER}/address/${h.address}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-mono text-xs text-indigo-400 hover:text-indigo-300"
+                        >
+                          {truncateAddress(h.address)}
+                        </a>
+                      </td>
+                      <td className="py-2 text-right font-mono text-xs">
+                        {Number(h.balance).toLocaleString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">No holders yet.</p>
+          )}
+        </div>
+
+        {/* Asset Events */}
+        <ActivityFeed
+          events={assetEvents ?? []}
+          isLoading={eventsLoading}
+          title="Asset Activity"
+        />
       </div>
 
       {/* ═══════════════ MINT & BURN ═══════════════ */}
