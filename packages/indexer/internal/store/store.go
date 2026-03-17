@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/linxGnu/grocksdb"
@@ -11,10 +12,18 @@ import (
 
 // Key prefixes for RocksDB namespace isolation.
 const (
-	prefixTokenMeta   = "t:meta:"    // t:meta:{tokenId} → TokenMeta JSON
-	prefixHolder      = "t:holder:"  // t:holder:{tokenId}:{address} → balance string
-	prefixEvent       = "e:"         // e:{block}:{logIndex} → TransferEvent JSON
-	prefixCursor      = "cursor"     // cursor → last indexed block (uint64 string)
+	prefixTokenMeta    = "t:meta:"    // t:meta:{tokenId} → TokenMeta JSON
+	prefixHolder       = "t:holder:"  // t:holder:{tokenId}:{address} → balance string
+	prefixEvent        = "e:"         // e:{block}:{logIndex} → TransferEvent JSON
+	prefixCursor       = "cursor"     // cursor → last indexed block (uint64 string)
+	prefixGenericEvent = "ge:"        // ge:{block}:{logIndex} → GenericEvent JSON
+	prefixAssetMeta    = "a:meta:"    // a:meta:{tokenId} → AssetConfig JSON
+	prefixIdentity     = "i:"         // i:{wallet} → Identity JSON
+	prefixIdentCountry = "i:country:" // i:country:{country}:{wallet} → wallet string
+	prefixFreeze       = "f:"         // f:{wallet}:{tokenId|global} → FreezeState JSON
+	prefixHolderAddr   = "h:addr:"    // h:addr:{address}:{tokenId} → balance string
+	prefixGEToken      = "ge:token:"  // ge:token:{tokenId}:{block}:{logIndex} → key ref
+	prefixGEAddr       = "ge:addr:"   // ge:addr:{address}:{block}:{logIndex} → key ref
 )
 
 // TokenMeta holds aggregate metadata for a tokenId.
@@ -40,6 +49,46 @@ type TransferEvent struct {
 type Holder struct {
 	Address string `json:"address"`
 	Balance string `json:"balance"`
+}
+
+// GenericEvent captures any protocol event in a uniform shape.
+type GenericEvent struct {
+	TxHash    string `json:"txHash"`
+	Block     uint64 `json:"block"`
+	LogIndex  uint   `json:"logIndex"`
+	EventType string `json:"eventType"`
+	TokenID   string `json:"tokenId,omitempty"`
+	Address   string `json:"address,omitempty"`
+	Data      string `json:"data"`
+}
+
+// AssetConfig holds registered asset metadata.
+type AssetConfig struct {
+	TokenID      string `json:"tokenId"`
+	Name         string `json:"name"`
+	Symbol       string `json:"symbol"`
+	Issuer       string `json:"issuer"`
+	ProfileID    uint32 `json:"profileId"`
+	URI          string `json:"uri,omitempty"`
+	Paused       bool   `json:"paused"`
+	RegisteredAt uint64 `json:"registeredAt"`
+}
+
+// Identity maps a wallet to its ONCHAINID and country.
+type Identity struct {
+	Wallet   string `json:"wallet"`
+	Identity string `json:"identity"`
+	Country  uint16 `json:"country"`
+	BoundAt  uint64 `json:"boundAt"`
+}
+
+// FreezeState tracks freeze status for a wallet/asset pair.
+type FreezeState struct {
+	Wallet       string `json:"wallet"`
+	TokenID      string `json:"tokenId,omitempty"`
+	Frozen       bool   `json:"frozen"`
+	FrozenAmount string `json:"frozenAmount,omitempty"`
+	LockupExpiry uint64 `json:"lockupExpiry,omitempty"`
 }
 
 // Store wraps RocksDB for indexed state persistence.
@@ -142,6 +191,14 @@ func holderPrefix(tokenID string) []byte {
 	return []byte(prefixHolder + tokenID + ":")
 }
 
+func holderAddrKey(address, tokenID string) []byte {
+	return []byte(prefixHolderAddr + address + ":" + tokenID)
+}
+
+func holderAddrPrefix(address string) []byte {
+	return []byte(prefixHolderAddr + address + ":")
+}
+
 func (s *Store) getHolderBalance(tokenID, address string) (*big.Int, error) {
 	data, err := s.db.Get(s.ro, holderKey(tokenID, address))
 	if err != nil {
@@ -161,11 +218,17 @@ func (s *Store) getHolderBalance(tokenID, address string) (*big.Int, error) {
 }
 
 func (s *Store) putHolderBalance(tokenID, address string, balance *big.Int) error {
-	return s.db.Put(s.wo, holderKey(tokenID, address), []byte(balance.String()))
+	if err := s.db.Put(s.wo, holderKey(tokenID, address), []byte(balance.String())); err != nil {
+		return err
+	}
+	return s.db.Put(s.wo, holderAddrKey(address, tokenID), []byte(balance.String()))
 }
 
 func (s *Store) deleteHolder(tokenID, address string) error {
-	return s.db.Delete(s.wo, holderKey(tokenID, address))
+	if err := s.db.Delete(s.wo, holderKey(tokenID, address)); err != nil {
+		return err
+	}
+	return s.db.Delete(s.wo, holderAddrKey(address, tokenID))
 }
 
 // GetHolders returns all holders for a tokenId with their balances.
@@ -196,6 +259,24 @@ func (s *Store) GetHolderBalance(tokenID, address string) (string, error) {
 	return bal.String(), nil
 }
 
+// GetPortfolio returns all token holdings for a given address.
+func (s *Store) GetPortfolio(address string) ([]Holder, error) {
+	prefix := holderAddrPrefix(address)
+	it := s.db.NewIterator(s.ro)
+	defer it.Close()
+
+	var holdings []Holder
+	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+		key := string(it.Key().Data())
+		tokenID := key[len(string(prefix)):]
+		holdings = append(holdings, Holder{
+			Address: tokenID,
+			Balance: string(it.Value().Data()),
+		})
+	}
+	return holdings, nil
+}
+
 /*//////////////////////////////////////////////////////////////
                         EVENTS
 //////////////////////////////////////////////////////////////*/
@@ -219,7 +300,7 @@ func (s *Store) GetRecentEvents(limit int) ([]TransferEvent, error) {
 	defer it.Close()
 
 	// Seek to end of prefix range
-	endPrefix := []byte("f:") // 'f' > 'e', so this is past all events
+	endPrefix := []byte("e;") // 'e;' > 'e:' but < 'f'
 	it.Seek(endPrefix)
 
 	// Move back to last event
@@ -266,6 +347,420 @@ func (s *Store) GetTokenEvents(tokenID string, limit int) ([]TransferEvent, erro
 		}
 	}
 	return filtered, nil
+}
+
+/*//////////////////////////////////////////////////////////////
+                    GENERIC EVENTS
+//////////////////////////////////////////////////////////////*/
+
+func genericEventKey(block uint64, logIndex uint) []byte {
+	return []byte(fmt.Sprintf("%s%012d:%06d", prefixGenericEvent, block, logIndex))
+}
+
+func geTokenKey(tokenID string, block uint64, logIndex uint) []byte {
+	return []byte(fmt.Sprintf("%s%s:%012d:%06d", prefixGEToken, tokenID, block, logIndex))
+}
+
+func geAddrKey(address string, block uint64, logIndex uint) []byte {
+	return []byte(fmt.Sprintf("%s%s:%012d:%06d", prefixGEAddr, address, block, logIndex))
+}
+
+func (s *Store) putGenericEvent(evt *GenericEvent) error {
+	data, err := json.Marshal(evt)
+	if err != nil {
+		return err
+	}
+	key := genericEventKey(evt.Block, evt.LogIndex)
+	if err := s.db.Put(s.wo, key, data); err != nil {
+		return err
+	}
+	// Secondary indexes
+	if evt.TokenID != "" {
+		if err := s.db.Put(s.wo, geTokenKey(evt.TokenID, evt.Block, evt.LogIndex), key); err != nil {
+			return err
+		}
+	}
+	if evt.Address != "" {
+		if err := s.db.Put(s.wo, geAddrKey(evt.Address, evt.Block, evt.LogIndex), key); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// RecordGenericEvent persists a generic protocol event with optional secondary indexes.
+func (s *Store) RecordGenericEvent(evt *GenericEvent) error {
+	return s.putGenericEvent(evt)
+}
+
+// GetProtocolEvents returns generic events with optional filters.
+func (s *Store) GetProtocolEvents(limit int, eventType, tokenID, address string) ([]GenericEvent, error) {
+	it := s.db.NewIterator(s.ro)
+	defer it.Close()
+
+	// Choose the best index based on filters
+	if tokenID != "" {
+		return s.getProtocolEventsByIndex(it, []byte(prefixGEToken+tokenID+":"), limit, eventType)
+	}
+	if address != "" {
+		return s.getProtocolEventsByIndex(it, []byte(prefixGEAddr+address+":"), limit, eventType)
+	}
+
+	// Full scan of ge: prefix (reverse for most recent)
+	prefix := []byte(prefixGenericEvent)
+	endPrefix := []byte("ge;")
+	it.Seek(endPrefix)
+	if it.Valid() {
+		it.Prev()
+	} else {
+		it.SeekToLast()
+	}
+
+	var events []GenericEvent
+	for ; it.Valid() && len(events) < limit; it.Prev() {
+		key := it.Key().Data()
+		if len(key) < len(prefix) || string(key[:len(prefix)]) != string(prefix) {
+			break
+		}
+		var evt GenericEvent
+		if err := json.Unmarshal(it.Value().Data(), &evt); err != nil {
+			continue
+		}
+		if eventType != "" && evt.EventType != eventType {
+			continue
+		}
+		events = append(events, evt)
+	}
+
+	for i, j := 0, len(events)-1; i < j; i, j = i+1, j-1 {
+		events[i], events[j] = events[j], events[i]
+	}
+	return events, nil
+}
+
+func (s *Store) getProtocolEventsByIndex(it *grocksdb.Iterator, prefix []byte, limit int, eventType string) ([]GenericEvent, error) {
+	// Find the end of the prefix range for reverse iteration
+	endPrefix := make([]byte, len(prefix))
+	copy(endPrefix, prefix)
+	endPrefix[len(endPrefix)-1]++ // increment last byte
+	it.Seek(endPrefix)
+	if it.Valid() {
+		it.Prev()
+	} else {
+		it.SeekToLast()
+	}
+
+	var events []GenericEvent
+	for ; it.Valid() && len(events) < limit; it.Prev() {
+		key := it.Key().Data()
+		if len(key) < len(prefix) || string(key[:len(prefix)]) != string(prefix) {
+			break
+		}
+		// Value is the primary key — fetch actual event
+		primaryKey := it.Value().Data()
+		data, err := s.db.Get(s.ro, primaryKey)
+		if err != nil {
+			continue
+		}
+		if !data.Exists() {
+			data.Free()
+			continue
+		}
+		var evt GenericEvent
+		if err := json.Unmarshal(data.Data(), &evt); err != nil {
+			data.Free()
+			continue
+		}
+		data.Free()
+		if eventType != "" && evt.EventType != eventType {
+			continue
+		}
+		events = append(events, evt)
+	}
+
+	for i, j := 0, len(events)-1; i < j; i, j = i+1, j-1 {
+		events[i], events[j] = events[j], events[i]
+	}
+	return events, nil
+}
+
+/*//////////////////////////////////////////////////////////////
+                    ASSET CONFIG
+//////////////////////////////////////////////////////////////*/
+
+func assetMetaKey(tokenID string) []byte {
+	return []byte(prefixAssetMeta + tokenID)
+}
+
+// RecordAsset creates or updates an AssetConfig.
+func (s *Store) RecordAsset(asset *AssetConfig) error {
+	data, err := json.Marshal(asset)
+	if err != nil {
+		return err
+	}
+	return s.db.Put(s.wo, assetMetaKey(asset.TokenID), data)
+}
+
+// GetAsset returns the AssetConfig for a tokenId.
+func (s *Store) GetAsset(tokenID string) (*AssetConfig, error) {
+	data, err := s.db.Get(s.ro, assetMetaKey(tokenID))
+	if err != nil {
+		return nil, err
+	}
+	defer data.Free()
+	if !data.Exists() {
+		return nil, nil
+	}
+	var asset AssetConfig
+	if err := json.Unmarshal(data.Data(), &asset); err != nil {
+		return nil, err
+	}
+	return &asset, nil
+}
+
+// GetAllAssets returns all registered asset configs.
+func (s *Store) GetAllAssets() ([]*AssetConfig, error) {
+	prefix := []byte(prefixAssetMeta)
+	it := s.db.NewIterator(s.ro)
+	defer it.Close()
+
+	var assets []*AssetConfig
+	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+		var asset AssetConfig
+		if err := json.Unmarshal(it.Value().Data(), &asset); err != nil {
+			continue
+		}
+		assets = append(assets, &asset)
+	}
+	return assets, nil
+}
+
+// UpdateAssetPaused sets the paused flag for a given tokenId.
+func (s *Store) UpdateAssetPaused(tokenID string, paused bool) error {
+	asset, err := s.GetAsset(tokenID)
+	if err != nil {
+		return err
+	}
+	if asset == nil {
+		asset = &AssetConfig{TokenID: tokenID}
+	}
+	asset.Paused = paused
+	return s.RecordAsset(asset)
+}
+
+// UpdateAssetURI sets the URI for a given tokenId.
+func (s *Store) UpdateAssetURI(tokenID, uri string) error {
+	asset, err := s.GetAsset(tokenID)
+	if err != nil {
+		return err
+	}
+	if asset == nil {
+		asset = &AssetConfig{TokenID: tokenID}
+	}
+	asset.URI = uri
+	return s.RecordAsset(asset)
+}
+
+/*//////////////////////////////////////////////////////////////
+                    IDENTITY
+//////////////////////////////////////////////////////////////*/
+
+func identityKey(wallet string) []byte {
+	return []byte(prefixIdentity + wallet)
+}
+
+func identityCountryKey(country uint16, wallet string) []byte {
+	return []byte(fmt.Sprintf("%s%d:%s", prefixIdentCountry, country, wallet))
+}
+
+// RecordIdentity creates or updates an identity binding.
+func (s *Store) RecordIdentity(id *Identity) error {
+	data, err := json.Marshal(id)
+	if err != nil {
+		return err
+	}
+	if err := s.db.Put(s.wo, identityKey(id.Wallet), data); err != nil {
+		return err
+	}
+	return s.db.Put(s.wo, identityCountryKey(id.Country, id.Wallet), []byte(id.Wallet))
+}
+
+// DeleteIdentity removes an identity binding.
+func (s *Store) DeleteIdentity(wallet string) error {
+	// Read existing to clean up country index
+	existing, err := s.GetIdentity(wallet)
+	if err != nil {
+		return err
+	}
+	if existing != nil {
+		_ = s.db.Delete(s.wo, identityCountryKey(existing.Country, wallet))
+	}
+	return s.db.Delete(s.wo, identityKey(wallet))
+}
+
+// GetIdentity returns the identity for a wallet.
+func (s *Store) GetIdentity(wallet string) (*Identity, error) {
+	data, err := s.db.Get(s.ro, identityKey(wallet))
+	if err != nil {
+		return nil, err
+	}
+	defer data.Free()
+	if !data.Exists() {
+		return nil, nil
+	}
+	var id Identity
+	if err := json.Unmarshal(data.Data(), &id); err != nil {
+		return nil, err
+	}
+	return &id, nil
+}
+
+// GetIdentitiesByCountry returns all identities for a given country code.
+func (s *Store) GetIdentitiesByCountry(country uint16, limit int) ([]*Identity, error) {
+	prefix := []byte(fmt.Sprintf("%s%d:", prefixIdentCountry, country))
+	it := s.db.NewIterator(s.ro)
+	defer it.Close()
+
+	var identities []*Identity
+	for it.Seek(prefix); it.ValidForPrefix(prefix) && len(identities) < limit; it.Next() {
+		wallet := string(it.Value().Data())
+		id, err := s.GetIdentity(wallet)
+		if err != nil || id == nil {
+			continue
+		}
+		identities = append(identities, id)
+	}
+	return identities, nil
+}
+
+// GetAllIdentities returns all identities up to a limit.
+func (s *Store) GetAllIdentities(limit int) ([]*Identity, error) {
+	prefix := []byte(prefixIdentity)
+	it := s.db.NewIterator(s.ro)
+	defer it.Close()
+
+	var identities []*Identity
+	for it.Seek(prefix); it.ValidForPrefix(prefix) && len(identities) < limit; it.Next() {
+		key := string(it.Key().Data())
+		// Skip country index keys (i:country:...)
+		if strings.HasPrefix(key, prefixIdentCountry) {
+			continue
+		}
+		var id Identity
+		if err := json.Unmarshal(it.Value().Data(), &id); err != nil {
+			continue
+		}
+		identities = append(identities, &id)
+	}
+	return identities, nil
+}
+
+/*//////////////////////////////////////////////////////////////
+                    FREEZE STATE
+//////////////////////////////////////////////////////////////*/
+
+func freezeKey(wallet, tokenID string) []byte {
+	suffix := "global"
+	if tokenID != "" {
+		suffix = tokenID
+	}
+	return []byte(prefixFreeze + wallet + ":" + suffix)
+}
+
+func freezeWalletPrefix(wallet string) []byte {
+	return []byte(prefixFreeze + wallet + ":")
+}
+
+// RecordFreeze creates or updates a freeze state.
+func (s *Store) RecordFreeze(state *FreezeState) error {
+	data, err := json.Marshal(state)
+	if err != nil {
+		return err
+	}
+	return s.db.Put(s.wo, freezeKey(state.Wallet, state.TokenID), data)
+}
+
+// GetFreeze returns the freeze state for a specific wallet/tokenId pair.
+func (s *Store) GetFreeze(wallet, tokenID string) (*FreezeState, error) {
+	data, err := s.db.Get(s.ro, freezeKey(wallet, tokenID))
+	if err != nil {
+		return nil, err
+	}
+	defer data.Free()
+	if !data.Exists() {
+		return nil, nil
+	}
+	var state FreezeState
+	if err := json.Unmarshal(data.Data(), &state); err != nil {
+		return nil, err
+	}
+	return &state, nil
+}
+
+// GetFreezes returns all freeze states for a wallet.
+func (s *Store) GetFreezes(wallet string) ([]*FreezeState, error) {
+	prefix := freezeWalletPrefix(wallet)
+	it := s.db.NewIterator(s.ro)
+	defer it.Close()
+
+	var states []*FreezeState
+	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+		var state FreezeState
+		if err := json.Unmarshal(it.Value().Data(), &state); err != nil {
+			continue
+		}
+		states = append(states, &state)
+	}
+	return states, nil
+}
+
+// GetFrozenWallets scans all freeze states, optionally filtering by tokenId.
+func (s *Store) GetFrozenWallets(tokenID string) ([]*FreezeState, error) {
+	prefix := []byte(prefixFreeze)
+	it := s.db.NewIterator(s.ro)
+	defer it.Close()
+
+	var states []*FreezeState
+	for it.Seek(prefix); it.ValidForPrefix(prefix); it.Next() {
+		var state FreezeState
+		if err := json.Unmarshal(it.Value().Data(), &state); err != nil {
+			continue
+		}
+		if !state.Frozen {
+			continue
+		}
+		if tokenID != "" && state.TokenID != tokenID {
+			continue
+		}
+		states = append(states, &state)
+	}
+	return states, nil
+}
+
+// UpdateFreezeAmount updates the frozen amount for a wallet/tokenId pair.
+func (s *Store) UpdateFreezeAmount(wallet, tokenID, amount string) error {
+	state, err := s.GetFreeze(wallet, tokenID)
+	if err != nil {
+		return err
+	}
+	if state == nil {
+		state = &FreezeState{Wallet: wallet, TokenID: tokenID}
+	}
+	state.FrozenAmount = amount
+	return s.RecordFreeze(state)
+}
+
+// UpdateLockupExpiry updates the lockup expiry for a wallet/tokenId pair.
+func (s *Store) UpdateLockupExpiry(wallet, tokenID string, expiry uint64) error {
+	state, err := s.GetFreeze(wallet, tokenID)
+	if err != nil {
+		return err
+	}
+	if state == nil {
+		state = &FreezeState{Wallet: wallet, TokenID: tokenID}
+	}
+	state.LockupExpiry = expiry
+	return s.RecordFreeze(state)
 }
 
 /*//////////////////////////////////////////////////////////////
