@@ -44,8 +44,9 @@ WORKDIR /app
 COPY --from=builder /app/packages/tools/forge-visual/dist ./dist
 COPY --from=builder /app/packages/tools/forge-visual/server ./server
 COPY --from=builder /app/packages/tools/forge-visual/package.json ./package.json
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/packages/tools/forge-visual/node_modules ./local_modules
+
+# Install production deps directly (avoids pnpm symlink issues)
+RUN npm install --omit=dev
 
 # Copy contracts source (forge needs it to run tests)
 COPY packages/contracts/ /project/
